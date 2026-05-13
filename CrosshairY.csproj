@@ -9,7 +9,7 @@
     <RootNamespace>CrosshairY</RootNamespace>
     <AssemblyName>CrosshairY</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon></ApplicationIcon>
+    <ApplicationIcon>CrosshairY.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
