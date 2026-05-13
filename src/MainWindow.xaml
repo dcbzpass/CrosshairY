@@ -19,9 +19,10 @@
         <Grid ClipToBounds="True">
 
             <Grid x:Name="StartupGrid" Background="#080808" Panel.ZIndex="10">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Margin="20,0,0,0">
                     <TextBlock x:Name="AsciiText"
-                               Text="CROSSHAIRY"
+                               Text="Welcome."
                                FontFamily="{StaticResource BebasNeue}"
                                FontSize="96"
                                Foreground="#f5f5f5"
@@ -35,7 +36,7 @@
                     <Rectangle x:Name="AccentLine"
                                Height="1" Width="0"
                                HorizontalAlignment="Center"
-                               Margin="0,10,0,0"
+                               Margin="0,14,0,0"
                                Fill="#f5f5f5"
                                Opacity="0.25"/>
                     <TextBlock x:Name="StatusText"
@@ -43,7 +44,7 @@
                                FontSize="11"
                                Foreground="#5a5a5a"
                                HorizontalAlignment="Center"
-                               Margin="0,22,0,0"
+                               Margin="0,14,0,0"
                                Opacity="0"
                                Text=""/>
                 </StackPanel>
@@ -64,9 +65,9 @@
                             MouseLeftButtonDown="TitleBar_MouseDown">
                         <Grid Margin="18,0,8,0">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="CROSSHAIRY"
-                                           FontFamily="{StaticResource BebasNeue}"
-                                           FontSize="17"
+                                <TextBlock Text="CrosshairY"
+                                           FontFamily="{StaticResource IBMPlexMono}"
+                                           FontSize="13"
                                            Foreground="#f5f5f5"
                                            VerticalAlignment="Center"/>
                                 <TextBlock Text=" — v1.0.0"
@@ -434,18 +435,34 @@
                     Visibility="Collapsed"
                     Opacity="0"
                     Background="#080808">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="GOODBYE."
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Margin="20,0,0,0">
+                    <TextBlock x:Name="GoodbyeText"
+                               Text="GOODBYE."
                                FontFamily="{StaticResource BebasNeue}"
-                               FontSize="72"
+                               FontSize="96"
                                Foreground="#f5f5f5"
-                               HorizontalAlignment="Center"/>
-                    <TextBlock Text="See you next time."
+                               HorizontalAlignment="Center"
+                               Opacity="0"
+                               RenderTransformOrigin="0.5,0.5">
+                        <TextBlock.RenderTransform>
+                            <ScaleTransform/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                    <Rectangle x:Name="GoodbyeLine"
+                               Height="1" Width="0"
+                               HorizontalAlignment="Center"
+                               Margin="0,14,0,0"
+                               Fill="#f5f5f5"
+                               Opacity="0.25"/>
+                    <TextBlock x:Name="GoodbyeSubText"
+                               Text="See you next time."
                                FontFamily="{StaticResource IBMPlexMono}"
                                FontSize="11"
                                Foreground="#5a5a5a"
                                HorizontalAlignment="Center"
-                               Margin="0,12,0,0"/>
+                               Margin="0,14,0,0"
+                               Opacity="0"/>
                 </StackPanel>
             </Border>
 
