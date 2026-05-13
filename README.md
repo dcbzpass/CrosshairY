@@ -2,7 +2,7 @@
 
 # CrosshairY
 
-**A lightweight crosshair overlay for Windows — always on top, fully customizable, zero bloat.**
+**A lightweight crosshair overlay for Windows. Always on top, fully customizable, zero bloat.**
 
 ![Platform](https://img.shields.io/badge/platform-Windows-blue?style=flat-square)
 ![.NET](https://img.shields.io/badge/.NET-8.0-purple?style=flat-square)
@@ -21,13 +21,13 @@ CrosshairY draws a persistent crosshair directly on your screen as a transparent
 
 ## Features
 
-- **17 crosshair templates** — Dot, Ring, Square, Thin Cross, Thick Cross, Cross·, T-Shape, Circle+, Small Plus, Large Plus, Sniper, X Cross, X·, Arrows, Chevrons, Triangle, Diamond
+- **17 crosshair templates** - Dot, Ring, Square, Thin Cross, Thick Cross, Cross·, T-Shape, Circle+, Small Plus, Large Plus, Sniper, X Cross, X·, Arrows, Chevrons, Triangle, Diamond
 - **8 color swatches** with live preview
 - **Outline toggle** with adjustable thickness (1–5)
 - **Size slider** from 50% to 200%
-- **Profile system** — save, load, overwrite and delete configs stored locally in `%APPDATA%\CrosshairY`. Drop a friend's `.json` in the folder and hit reload
+- **Profile system** - save, load, overwrite and delete configs stored locally in `%APPDATA%\CrosshairY`. Drop a friend's `.json` in the folder and hit reload
 - **Last used config** auto-loads on startup
-- **Proof mode** — hides the window from screen capture software with a single keypress
+- **Proof mode** - hides the window from screen capture software with a single keypress
 - **No taskbar icon**, borderless, transparent, runs silently in the background
 
 ---
@@ -72,10 +72,10 @@ Both are free and available on [Google Fonts](https://fonts.google.com):
 
 Configs are plain `.json` files stored in `%APPDATA%\CrosshairY\`.
 
-- **Save** — type a name in the Profiles tab and hit Save
-- **Load** — click Load next to any config to apply it instantly
-- **Overwrite** — hit Save next to an existing config to update it with your current settings
-- **Share** — paste a friend's `.json` into the folder and hit Reload to see it appear
+- **Save** - type a name in the Profiles tab and hit Save
+- **Load** - click Load next to any config to apply it instantly
+- **Overwrite** - hit Save next to an existing config to update it with your current settings
+- **Share** - paste a friend's `.json` into the folder and hit Reload to see it appear
 
 The last loaded config is remembered and auto-applied on the next launch.
 
@@ -113,4 +113,4 @@ CrosshairY/
 
 ## License
 
-MIT — do whatever you want with it.
+MIT - do whatever you want with it.
