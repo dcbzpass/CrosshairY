@@ -400,9 +400,34 @@ public partial class MainWindow : Window
     private void Close_Click(object s, RoutedEventArgs e)
     {
         GoodbyeOverlay.Visibility = Visibility.Visible;
-        var fadeIn = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(300))) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
-        GoodbyeOverlay.BeginAnimation(OpacityProperty, fadeIn);
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
+
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+        var overlayFade = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(300))) { EasingFunction = ease };
+        GoodbyeOverlay.BeginAnimation(OpacityProperty, overlayFade);
+
+        var textFade = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(600))) { EasingFunction = ease };
+        GoodbyeText.BeginAnimation(OpacityProperty, textFade);
+
+        var st = (ScaleTransform)GoodbyeText.RenderTransform;
+        st.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.92, 1, new Duration(TimeSpan.FromMilliseconds(600))) { EasingFunction = ease });
+        st.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.92, 1, new Duration(TimeSpan.FromMilliseconds(600))) { EasingFunction = ease });
+
+        var lineExpand = new DoubleAnimation(0, 120, new Duration(TimeSpan.FromMilliseconds(500)))
+        {
+            BeginTime = TimeSpan.FromMilliseconds(400),
+            EasingFunction = ease
+        };
+        GoodbyeLine.BeginAnimation(FrameworkElement.WidthProperty, lineExpand);
+
+        var subFade = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(400)))
+        {
+            BeginTime = TimeSpan.FromMilliseconds(800),
+            EasingFunction = ease
+        };
+        GoodbyeSubText.BeginAnimation(OpacityProperty, subFade);
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2800) };
         timer.Tick += (_, _) =>
         {
             timer.Stop();
