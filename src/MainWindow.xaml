@@ -389,7 +389,7 @@
                                             <Button Content="DISCORD"
                                                     Style="{StaticResource DarkBtn}"
                                                     HorizontalAlignment="Stretch"
-                                                    Tag="https://discord.gg/A7B6KS9Trb"
+                                                    Tag="https://discord.gg/tvJpwkyBmN"
                                                     Click="SocialLink_Click"/>
                                         </StackPanel>
                                     </Border>
