@@ -70,7 +70,7 @@
                                            FontSize="13"
                                            Foreground="#f5f5f5"
                                            VerticalAlignment="Center"/>
-                                <TextBlock Text=" — v1.0.0"
+                                <TextBlock Text=" — v1.0.1"
                                            FontFamily="{StaticResource IBMPlexMono}"
                                            FontSize="9"
                                            Foreground="#2a2a2a"
