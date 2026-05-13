@@ -18,7 +18,6 @@
             ClipToBounds="True">
         <Grid ClipToBounds="True">
 
-            <!-- Startup splash -->
             <Grid x:Name="StartupGrid" Background="#080808" Panel.ZIndex="10">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock x:Name="AsciiText"
@@ -50,7 +49,6 @@
                 </StackPanel>
             </Grid>
 
-            <!-- Main UI -->
             <Border x:Name="MainGrid" Visibility="Collapsed"
                     Background="Transparent" Panel.ZIndex="1">
                 <Grid>
@@ -59,7 +57,6 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Title bar -->
                     <Border Grid.Row="0"
                             Background="#080808"
                             BorderBrush="#1e1e1e"
@@ -94,14 +91,12 @@
                         </Grid>
                     </Border>
 
-                    <!-- Content area -->
                     <Grid Grid.Row="1">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="145"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <!-- Sidebar -->
                         <Border Grid.Column="0"
                                 Background="#080808"
                                 BorderBrush="#1e1e1e"
@@ -136,7 +131,6 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Panels -->
                         <ScrollViewer x:Name="MainScrollViewer"
                                       Grid.Column="1"
                                       Background="#080808"
@@ -144,7 +138,6 @@
                                       Padding="0,0,2,0">
                             <Grid>
 
-                                <!-- Crosshairs panel -->
                                 <StackPanel x:Name="CrosshairsPanel" Margin="28,24,28,28">
 
                                     <TextBlock Text="CROSSHAIRS"
@@ -248,7 +241,6 @@
 
                                 </StackPanel>
 
-                                <!-- Profiles panel -->
                                 <StackPanel x:Name="ProfilesPanel" Margin="28,24,28,28" Visibility="Collapsed">
 
                                     <TextBlock Text="PROFILES"
@@ -264,7 +256,6 @@
                                                TextWrapping="Wrap"/>
                                     <Rectangle Height="1" Fill="#1e1e1e" Margin="0,0,0,18"/>
 
-                                    <!-- Save new config -->
                                     <Border BorderBrush="#1e1e1e" BorderThickness="1"
                                             Background="#0f0f0f" Margin="0,0,0,10">
                                         <StackPanel Margin="18,16,18,18">
@@ -295,7 +286,6 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <!-- Config list -->
                                     <Border BorderBrush="#1e1e1e" BorderThickness="1"
                                             Background="#0f0f0f" Margin="0,0,0,10">
                                         <StackPanel Margin="18,16,18,18">
@@ -317,7 +307,6 @@
 
                                 </StackPanel>
 
-                                <!-- Settings panel -->
                                 <StackPanel x:Name="SettingsPanel" Margin="28,24,28,28" Visibility="Collapsed">
 
                                     <TextBlock Text="SETTINGS"
@@ -356,7 +345,6 @@
 
                                 </StackPanel>
 
-                                <!-- Support panel -->
                                 <StackPanel x:Name="SupportPanel" Margin="28,24,28,28" Visibility="Collapsed">
 
                                     <TextBlock Text="SUPPORT"
@@ -441,7 +429,6 @@
                 </Grid>
             </Border>
 
-            <!-- Goodbye overlay -->
             <Border x:Name="GoodbyeOverlay"
                     Panel.ZIndex="100"
                     Visibility="Collapsed"
