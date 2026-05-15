@@ -28,12 +28,17 @@ public partial class MainWindow : Window
 
     private CrosshairOverlay? _crOverlay;
 
-    private static readonly string ProfilesDir =
+    private static readonly string AppDir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrosshairY");
 
-    private static readonly string LastUsedFile =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrosshairY", ".lastused");
+    private static readonly string ProfilesDir =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrosshairY", "Configs");
 
+    private static readonly string LastUsedFile =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrosshairY", "Configs", ".lastused");
+
+    private static readonly string LaunchesFile =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrosshairY", "launches.dat");
 
     private static readonly (string id, string name)[] CrTemplates =
     {
@@ -160,7 +165,7 @@ public partial class MainWindow : Window
 
         var lineExpand = new DoubleAnimation(0, 120, new Duration(TimeSpan.FromMilliseconds(500)))
         {
-            BeginTime = TimeSpan.FromMilliseconds(400),
+            BeginTime      = TimeSpan.FromMilliseconds(400),
             EasingFunction = ease
         };
         AccentLine.BeginAnimation(FrameworkElement.WidthProperty, lineExpand);
@@ -170,14 +175,129 @@ public partial class MainWindow : Window
         {
             t2.Stop();
             StatusText.Text = "starting CrosshairY...";
-            var fade = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(400))) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+            var fade = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(400)))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
             StatusText.BeginAnimation(OpacityProperty, fade);
         };
         t2.Start();
 
         var t3 = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(3000) };
-        t3.Tick += (_, _) => { t3.Stop(); TransitionToMain(); };
+        t3.Tick += (_, _) => { t3.Stop(); CheckAndShowSurvey(); };
         t3.Start();
+    }
+
+    // increments launch count, shows a pending survey if one is due, then continues to the main ui
+    private void CheckAndShowSurvey()
+    {
+        int launchCount   = IncrementLaunchCount(out var completedIds);
+        var pendingSurvey = GetPendingSurvey(launchCount, completedIds);
+
+        if (pendingSurvey.HasValue)
+        {
+            var (surveyId, question, options) = pendingSurvey.Value;
+            var win = new SurveyWindow(question, options, launchCount) { Owner = this };
+            win.ShowDialog();
+            if (win.Submitted)
+                MarkSurveyCompleted(surveyId);
+        }
+
+        TransitionToMain();
+    }
+
+    private static int IncrementLaunchCount(out HashSet<string> completedIds)
+    {
+        Directory.CreateDirectory(AppDir);
+
+        int count    = 1;
+        completedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            if (File.Exists(LaunchesFile))
+            {
+                var parts = File.ReadAllText(LaunchesFile).Split(',', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length > 0 && int.TryParse(parts[0].Trim(), out int stored))
+                    count = stored + 1;
+                foreach (var part in parts.Skip(1))
+                    completedIds.Add(part.Trim());
+            }
+        }
+        catch { }
+
+        WriteLaunchesFile(count, completedIds);
+        return count;
+    }
+
+    private static void MarkSurveyCompleted(string surveyId)
+    {
+        try
+        {
+            int count = 1;
+            HashSet<string> completedIds;
+
+            if (File.Exists(LaunchesFile))
+            {
+                var parts = File.ReadAllText(LaunchesFile).Split(',', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length > 0 && int.TryParse(parts[0].Trim(), out int stored))
+                    count = stored;
+                completedIds = new HashSet<string>(parts.Skip(1).Select(p => p.Trim()), StringComparer.OrdinalIgnoreCase);
+            }
+            else
+            {
+                completedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            completedIds.Add(surveyId);
+            WriteLaunchesFile(count, completedIds);
+        }
+        catch { }
+    }
+
+    private static void WriteLaunchesFile(int count, HashSet<string> completedIds)
+    {
+        try
+        {
+            var parts = new List<string> { count.ToString() };
+            parts.AddRange(completedIds);
+            File.WriteAllText(LaunchesFile, string.Join(",", parts));
+        }
+        catch { }
+    }
+
+    private static readonly (string id, string question, string[] options)[] Surveys =
+    {
+        (
+            "survey_3",
+            "How did you find us?",
+            new[] { "TikTok", "GitHub", "Discord", "Friend", "Other" }
+        ),
+        (
+            "survey_7",
+            "What game do you mainly use CrosshairY for?",
+            new[] { "Fortnite", "Blood Strike", "CS2", "Apex Legends", "Valorant", "Other" }
+        ),
+        (
+            "survey_15",
+            "What would you like to see added next?",
+            new[] { "More crosshair templates", "Custom colors (hex input)", "Hotkey to toggle crosshair", "Multiple crosshair profiles active at once", "Other" }
+        ),
+        (
+            "survey_30",
+            "How would you rate CrosshairY?",
+            new[] { "1 star", "2 stars", "3 stars", "4 stars", "5 stars" }
+        )
+    };
+
+    private static readonly int[] SurveyTriggers = { 3, 7, 15, 30 };
+
+    private static (string id, string question, string[] options)? GetPendingSurvey(int launchCount, HashSet<string> completedIds)
+    {
+        for (int i = 0; i < SurveyTriggers.Length; i++)
+            if (launchCount == SurveyTriggers[i] && !completedIds.Contains(Surveys[i].id))
+                return Surveys[i];
+        return null;
     }
 
     private void TransitionToMain()
@@ -191,7 +311,10 @@ public partial class MainWindow : Window
             StartupGrid.Visibility = Visibility.Collapsed;
             MainGrid.Visibility    = Visibility.Visible;
             MainGrid.Opacity       = 0;
-            var fadeIn = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(300))) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+            var fadeIn = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(300)))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
             MainGrid.BeginAnimation(OpacityProperty, fadeIn);
             InitSettingsPanel();
             SetupSmoothScroll(MainScrollViewer);
@@ -209,7 +332,7 @@ public partial class MainWindow : Window
         _scrollTarget = 0;
         sv.PreviewMouseWheel += (s, e) =>
         {
-            e.Handled = true;
+            e.Handled     = true;
             _scrollTarget = Math.Clamp(_scrollTarget - e.Delta * 0.45, 0, sv.ScrollableHeight);
             if (_scrollTimer == null || !_scrollTimer.IsEnabled)
             {
@@ -229,7 +352,10 @@ public partial class MainWindow : Window
     private void FadeInPanel(StackPanel panel)
     {
         panel.Opacity = 0;
-        var anim = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(160))) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+        var anim = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(160)))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
         panel.BeginAnimation(OpacityProperty, anim);
     }
 
@@ -415,14 +541,14 @@ public partial class MainWindow : Window
 
         var lineExpand = new DoubleAnimation(0, 120, new Duration(TimeSpan.FromMilliseconds(500)))
         {
-            BeginTime = TimeSpan.FromMilliseconds(400),
+            BeginTime      = TimeSpan.FromMilliseconds(400),
             EasingFunction = ease
         };
         GoodbyeLine.BeginAnimation(FrameworkElement.WidthProperty, lineExpand);
 
         var subFade = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(400)))
         {
-            BeginTime = TimeSpan.FromMilliseconds(800),
+            BeginTime      = TimeSpan.FromMilliseconds(800),
             EasingFunction = ease
         };
         GoodbyeSubText.BeginAnimation(OpacityProperty, subFade);
@@ -554,14 +680,14 @@ public partial class MainWindow : Window
 
         if (files.Length == 0)
         {
-            ProfileListPanel.Children.Add(new System.Windows.Controls.TextBlock
+            ProfileListPanel.Children.Add(new TextBlock
             {
-                Text       = "No configs found. Save one or drop a .json file into the folder.",
-                FontFamily = (FontFamily)FindResource("IBMPlexMono"),
-                FontSize   = 9,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x5a, 0x5a, 0x5a)),
+                Text         = "No configs found. Save one or drop a .json file into the folder.",
+                FontFamily   = (FontFamily)FindResource("IBMPlexMono"),
+                FontSize     = 9,
+                Foreground   = new SolidColorBrush(Color.FromRgb(0x5a, 0x5a, 0x5a)),
                 TextWrapping = TextWrapping.Wrap,
-                Margin     = new Thickness(0, 4, 0, 4)
+                Margin       = new Thickness(0, 4, 0, 4)
             });
             return;
         }
@@ -571,11 +697,11 @@ public partial class MainWindow : Window
 
         foreach (var file in files.OrderBy(f => f))
         {
-            var name = Path.GetFileNameWithoutExtension(file);
-            var path = file;
+            var  name     = Path.GetFileNameWithoutExtension(file);
+            var  path     = file;
             bool isActive = string.Equals(path, lastUsed, StringComparison.OrdinalIgnoreCase);
 
-            var nameBlock = new System.Windows.Controls.TextBlock
+            var nameBlock = new TextBlock
             {
                 Text              = isActive ? name + " ●" : name,
                 FontFamily        = (FontFamily)FindResource("IBMPlexMono"),
@@ -587,23 +713,10 @@ public partial class MainWindow : Window
                 VerticalAlignment = VerticalAlignment.Center
             };
 
-            var loadBtn = new Button
-            {
-                Content = "LOAD",
-                Style   = (Style)FindResource("DarkBtn"),
-                Width   = 60,
-                Tag     = path
-            };
+            var loadBtn = new Button { Content = "LOAD", Style = (Style)FindResource("DarkBtn"), Width = 60, Tag = path };
             loadBtn.Click += (_, _) => { LoadProfile(path); LoadProfileList(); };
 
-            var saveBtn = new Button
-            {
-                Content = "SAVE",
-                Style   = (Style)FindResource("DarkBtn"),
-                Width   = 60,
-                Margin  = new Thickness(6, 0, 0, 0),
-                Tag     = path
-            };
+            var saveBtn = new Button { Content = "SAVE", Style = (Style)FindResource("DarkBtn"), Width = 60, Margin = new Thickness(6, 0, 0, 0), Tag = path };
             saveBtn.Click += (_, _) =>
             {
                 var cfg = new
@@ -619,37 +732,24 @@ public partial class MainWindow : Window
                 LoadProfileList();
             };
 
-            var deleteBtn = new Button
-            {
-                Content = "DEL",
-                Style   = (Style)FindResource("DarkBtn"),
-                Width   = 48,
-                Margin  = new Thickness(6, 0, 0, 0),
-                Tag     = path
-            };
-            deleteBtn.Click += (_, _) =>
-            {
-                try { File.Delete(path); } catch { }
-                LoadProfileList();
-            };
+            var deleteBtn = new Button { Content = "DEL", Style = (Style)FindResource("DarkBtn"), Width = 48, Margin = new Thickness(6, 0, 0, 0), Tag = path };
+            deleteBtn.Click += (_, _) => { try { File.Delete(path); } catch { } LoadProfileList(); };
 
             var row = new Grid { Margin = new Thickness(0, 0, 0, 6) };
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
             Grid.SetColumn(nameBlock, 0);
             Grid.SetColumn(loadBtn,   1);
             Grid.SetColumn(saveBtn,   2);
             Grid.SetColumn(deleteBtn, 3);
-
             row.Children.Add(nameBlock);
             row.Children.Add(loadBtn);
             row.Children.Add(saveBtn);
             row.Children.Add(deleteBtn);
 
-            var border = new Border
+            ProfileListPanel.Children.Add(new Border
             {
                 BorderBrush     = new SolidColorBrush(Color.FromRgb(0x1e, 0x1e, 0x1e)),
                 BorderThickness = new Thickness(1),
@@ -657,9 +757,7 @@ public partial class MainWindow : Window
                 Padding         = new Thickness(12, 10, 12, 10),
                 Margin          = new Thickness(0, 0, 0, 6),
                 Child           = row
-            };
-
-            ProfileListPanel.Children.Add(border);
+            });
         }
     }
 
