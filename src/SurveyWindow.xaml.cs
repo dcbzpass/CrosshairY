@@ -15,7 +15,7 @@ public partial class SurveyWindow : Window
     private const int WM_NCLBUTTONDOWN = 0xA1;
     private const int HT_CAPTION       = 0x2;
 
-    private const string WebhookUrl = "https://discord.com/api/webhooks/1504772887696113804/pLskyv13LUvjFY7JSsYp2CIK1jp9t6sa3uRJ_rn95yOJoEaWLau0s6nCCnva2koy4mmE";
+    private const string WebhookUrl = "WEBHOOK_URL_HERE";
 
     private static readonly HttpClient Http = new();
 
