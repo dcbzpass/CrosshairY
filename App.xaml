@@ -141,8 +141,8 @@
             </Border>
             <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter TargetName="Bd"   Property="Background" Value="{StaticResource Red}"/>
-                    <Setter TargetName="XPath" Property="Stroke"    Value="#f5f5f5"/>
+                    <Setter TargetName="Bd"    Property="Background" Value="#aa2020"/>
+                    <Setter TargetName="XPath" Property="Stroke"     Value="#f5f5f5"/>
                 </Trigger>
                 <Trigger Property="IsPressed" Value="True">
                     <Setter TargetName="Bd" Property="Opacity" Value="0.7"/>
@@ -150,57 +150,26 @@
             </ControlTemplate.Triggers>
         </ControlTemplate>
 
-        <Style x:Key="DarkBtn" TargetType="Button">
-            <Setter Property="Background"      Value="{StaticResource BgBtn}"/>
-            <Setter Property="Tag"             Value="{StaticResource BgHover}"/>
-            <Setter Property="Foreground"      Value="{StaticResource White}"/>
-            <Setter Property="FontFamily"      Value="{StaticResource IBMPlexMono}"/>
-            <Setter Property="FontSize"        Value="11"/>
-            <Setter Property="Height"          Value="30"/>
-            <Setter Property="Padding"         Value="8,0"/>
-            <Setter Property="Cursor"          Value="Hand"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Template"        Value="{StaticResource FlatBtnTemplate}"/>
+        <Style x:Key="TitleCloseBtn" TargetType="Button">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Background"            Value="Transparent"/>
+            <Setter Property="Cursor"                Value="Hand"/>
+            <Setter Property="Template"              Value="{StaticResource TitleCloseBtnTemplate}"/>
         </Style>
 
         <Style x:Key="TitleIconBtn" TargetType="Button">
-            <Setter Property="Background"      Value="Transparent"/>
-            <Setter Property="Tag"             Value="{StaticResource BgHover}"/>
-            <Setter Property="Foreground"      Value="{StaticResource Muted}"/>
-            <Setter Property="Width"           Value="30"/>
-            <Setter Property="Height"          Value="30"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor"          Value="Hand"/>
-            <Setter Property="Template"        Value="{StaticResource FlatTitleBtnTemplate}"/>
-        </Style>
-
-        <Style x:Key="TitleCloseBtn" TargetType="Button">
-            <Setter Property="Background"      Value="Transparent"/>
-            <Setter Property="Width"           Value="30"/>
-            <Setter Property="Height"          Value="30"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor"          Value="Hand"/>
-            <Setter Property="Template"        Value="{StaticResource TitleCloseBtnTemplate}"/>
-        </Style>
-
-        <Style x:Key="SideNavBtn" TargetType="Button">
-            <Setter Property="Background"                 Value="Transparent"/>
-            <Setter Property="Tag"                        Value="{StaticResource BgBtn}"/>
-            <Setter Property="Foreground"                 Value="{StaticResource White}"/>
-            <Setter Property="FontFamily"                 Value="{StaticResource IBMPlexMono}"/>
-            <Setter Property="FontSize"                   Value="11"/>
-            <Setter Property="Height"                     Value="32"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Padding"                    Value="16,0"/>
-            <Setter Property="BorderThickness"            Value="0"/>
-            <Setter Property="Cursor"                     Value="Hand"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Background"            Value="Transparent"/>
+            <Setter Property="Foreground"            Value="#5a5a5a"/>
+            <Setter Property="Width"                 Value="30"/>
+            <Setter Property="Height"                Value="30"/>
+            <Setter Property="Cursor"                Value="Hand"/>
+            <Setter Property="Tag"                   Value="#1a1a1a"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" Width="30" Height="30">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -214,6 +183,93 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <Style x:Key="DarkBtn" TargetType="Button">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Background"            Value="#141414"/>
+            <Setter Property="Foreground"            Value="#8a8a8a"/>
+            <Setter Property="FontFamily"            Value="{StaticResource IBMPlexMono}"/>
+            <Setter Property="FontSize"              Value="10"/>
+            <Setter Property="Height"                Value="30"/>
+            <Setter Property="Cursor"                Value="Hand"/>
+            <Setter Property="Tag"                   Value="#1e1e1e"/>
+            <Setter Property="Template"              Value="{StaticResource FlatBtnTemplate}"/>
+        </Style>
+
+        <Style x:Key="SideNavBtn" TargetType="Button">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Background"            Value="Transparent"/>
+            <Setter Property="Foreground"            Value="#5a5a5a"/>
+            <Setter Property="FontFamily"            Value="{StaticResource IBMPlexMono}"/>
+            <Setter Property="FontSize"              Value="11"/>
+            <Setter Property="Height"                Value="34"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Cursor"                Value="Hand"/>
+            <Setter Property="Padding"               Value="16,0"/>
+            <Setter Property="Tag"                   Value="#0f0f0f"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background"
+                                        Value="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- survey option button: same base as DarkBtn but left-aligned text and slightly taller -->
+        <Style x:Key="SurveyOptionBtn" TargetType="Button">
+            <Setter Property="OverridesDefaultStyle"      Value="True"/>
+            <Setter Property="Background"                 Value="#0f0f0f"/>
+            <Setter Property="Foreground"                 Value="#8a8a8a"/>
+            <Setter Property="FontFamily"                 Value="{StaticResource IBMPlexMono}"/>
+            <Setter Property="FontSize"                   Value="11"/>
+            <Setter Property="Height"                     Value="34"/>
+            <Setter Property="Cursor"                     Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Tag"                        Value="#1e1e1e"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="#1e1e1e"
+                                BorderThickness="1"
+                                Padding="14,0">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1e1e1e"/>
+                                <Setter Property="Foreground" Value="#f5f5f5"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.65"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="#3a3a3a"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="ToggleSwitch" TargetType="ToggleButton">
