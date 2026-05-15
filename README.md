@@ -26,10 +26,11 @@ CrosshairY draws a persistent crosshair directly on your screen as a transparent
 - **8 color swatches** with live preview
 - **Outline toggle** with adjustable thickness (1–5)
 - **Size slider** from 50% to 200%
-- **Profile system** - save, load, overwrite and delete configs stored locally in `%APPDATA%\CrosshairY`. Drop a friend's `.json` in the folder and hit reload
+- **Profile system** - save, load, overwrite and delete configs stored locally in `%APPDATA%\CrosshairY\Configs`. Drop a friend's `.json` in the folder and hit reload
 - **Last used config** auto-loads on startup
 - **Proof mode** - hides the window from screen capture software with a single keypress
 - **No taskbar icon**, borderless, transparent, runs silently in the background
+- **Launch surveys** - occasional single-question popups at launch milestones, never more than once each
 
 ---
 
@@ -71,7 +72,7 @@ Both are free and available on [Google Fonts](https://fonts.google.com):
 
 ## Profiles
 
-Configs are plain `.json` files stored in `%APPDATA%\CrosshairY\`.
+Configs are plain `.json` files stored in `%APPDATA%\CrosshairY\Configs\`.
 
 - **Save** - type a name in the Profiles tab and hit Save
 - **Load** - click Load next to any config to apply it instantly
@@ -88,24 +89,32 @@ Pressing the configured proof key calls `SetWindowDisplayAffinity(WDA_EXCLUDEFRO
 
 ---
 
+## Surveys
+
+At launch counts 3, 7, 15, and 30 a small popup appears with a single question before the main UI loads. Each survey shows at most once. Closing without answering defers it to the next launch. Responses are sent to a Discord webhook and the launch counter is stored in `%APPDATA%\CrosshairY\launches.dat`.
+
+---
+
 ## Project structure
 
 ```
 CrosshairY/
 │
 ├── src/
-│   ├── AppState.cs                 — runtime state
-│   ├── GlobalKeyboardHook.cs       — low-level keyboard hook
-│   ├── MainWindow.xaml             — main UI layout
-│   ├── MainWindow.xaml.cs          — UI logic
-│   ├── CrosshairOverlay.xaml       — transparent overlay window
-│   └── CrosshairOverlay.xaml.cs    — crosshair draw logic
+│   ├── AppState.cs                 - runtime state
+│   ├── GlobalKeyboardHook.cs       - low-level keyboard hook
+│   ├── MainWindow.xaml             - main UI layout
+│   ├── MainWindow.xaml.cs          - UI logic
+│   ├── CrosshairOverlay.xaml       - transparent overlay window
+│   ├── CrosshairOverlay.xaml.cs    - crosshair draw logic
+│   ├── SurveyWindow.xaml           - survey popup layout
+│   └── SurveyWindow.xaml.cs        - survey logic and webhook
 │
-├── Fonts/                          — Bebas Neue + IBM Plex Mono
-├── App.xaml                        — styles and resources
-├── App.xaml.cs                     — global exception handling
+├── Fonts/                          - Bebas Neue + IBM Plex Mono
+├── App.xaml                        - styles and resources
+├── App.xaml.cs                     - global exception handling
 ├── CrosshairY.csproj
-├── app.manifest                    — DPI awareness
+├── app.manifest                    - DPI awareness
 ├── build.bat
 └── clean.bat
 ```
