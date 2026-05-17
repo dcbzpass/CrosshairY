@@ -52,7 +52,7 @@ public partial class CrosshairOverlay : Window
         SetWindowDisplayAffinity(hwnd, active ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE);
     }
 
-    public void UpdateCrosshair(string template, string color, bool outline, int outlineSize, int size)
+    public void UpdateCrosshair(string template, string color, bool outline, int outlineSize, int size, int opacity, int gap)
     {
         if (string.IsNullOrEmpty(template))
         {
@@ -62,7 +62,8 @@ public partial class CrosshairOverlay : Window
 
         double cx = Width  / 2.0;
         double cy = Height / 2.0;
-        CrDraw.Draw(OverlayCanvas, cx, cy, size / 100.0, color, outline, outlineSize, template);
+        OverlayCanvas.Opacity = opacity / 100.0;
+        CrDraw.Draw(OverlayCanvas, cx, cy, size / 100.0, color, outline, outlineSize, template, gap);
 
         if (!IsVisible) Show();
     }
@@ -71,7 +72,7 @@ public partial class CrosshairOverlay : Window
 internal static class CrDraw
 {
     public static void Draw(Canvas canvas, double cx, double cy, double scale,
-        string colorHex, bool outline, double outSize, string template)
+        string colorHex, bool outline, double outSize, string template, int gap = 3)
     {
         canvas.Children.Clear();
 
@@ -104,23 +105,23 @@ internal static class CrDraw
                 break;
 
             case "thin_cross":
-                DrawCrossLines(canvas, cx, cy, scale, brush, black, outline, outSize, 3, 8, 1.5, false, false, false);
+                DrawCrossLines(canvas, cx, cy, scale, brush, black, outline, outSize, gap, 8, 1.5, false, false, false);
                 break;
 
             case "thick_cross":
-                DrawCrossLines(canvas, cx, cy, scale, brush, black, outline, outSize, 3, 6, 3.0, false, false, false);
+                DrawCrossLines(canvas, cx, cy, scale, brush, black, outline, outSize, gap, 6, 3.0, false, false, false);
                 break;
 
             case "cross_dot_c":
-                DrawCrossLines(canvas, cx, cy, scale, brush, black, outline, outSize, 3, 8, 1.5, true, false, false);
+                DrawCrossLines(canvas, cx, cy, scale, brush, black, outline, outSize, gap, 8, 1.5, true, false, false);
                 break;
 
             case "t_shape":
-                DrawCrossLines(canvas, cx, cy, scale, brush, black, outline, outSize, 3, 8, 1.5, false, true, false);
+                DrawCrossLines(canvas, cx, cy, scale, brush, black, outline, outSize, gap, 8, 1.5, false, true, false);
                 break;
 
             case "cross_circle":
-                DrawCrossLines(canvas, cx, cy, scale, brush, black, outline, outSize, 3, 8, 1.5, false, false, true);
+                DrawCrossLines(canvas, cx, cy, scale, brush, black, outline, outSize, gap, 8, 1.5, false, false, true);
                 break;
 
             case "small_plus":
@@ -132,7 +133,7 @@ internal static class CrDraw
                 break;
 
             case "sniper":
-                DrawCrossLines(canvas, cx, cy, scale, brush, black, outline, outSize, 25, 40, 1.0, false, false, false);
+                DrawCrossLines(canvas, cx, cy, scale, brush, black, outline, outSize, gap * 5, 40, 1.0, false, false, false);
                 break;
 
             case "x_cross":
@@ -283,18 +284,18 @@ internal static class CrDraw
     {
         double h  = 18 * s;
         double w  = 16 * s;
-        double st = 1.5 * s;
+        double st = Thick(1.5 * s);
 
         var pts = new[]
         {
-            new Point(cx,       cy - 2 * h / 3),
+            new Point(cx,         cy - 2 * h / 3),
             new Point(cx - w / 2, cy + h / 3),
             new Point(cx + w / 2, cy + h / 3)
         };
 
         if (outline)
         {
-            var pOut = new Polygon { Stroke = black, StrokeThickness = st + outSize * 2, Fill = Brushes.Transparent };
+            var pOut = new Polygon { Stroke = black, StrokeThickness = Thick(st + outSize * 2), Fill = Brushes.Transparent };
             foreach (var p in pts) pOut.Points.Add(p);
             c.Children.Add(pOut);
         }
@@ -306,8 +307,8 @@ internal static class CrDraw
     static void DrawDiamond(Canvas c, double cx, double cy, double s,
         Brush brush, Brush black, bool outline, double outSize)
     {
-        double r  = 10 * s;
-        double st = 1.5 * s;
+        double r  = System.Math.Max(1.0, 10 * s);
+        double st = Thick(1.5 * s);
 
         var pts = new[]
         {
@@ -319,7 +320,7 @@ internal static class CrDraw
 
         if (outline)
         {
-            var pOut = new Polygon { Stroke = black, StrokeThickness = st + outSize * 2, Fill = Brushes.Transparent };
+            var pOut = new Polygon { Stroke = black, StrokeThickness = Thick(st + outSize * 2), Fill = Brushes.Transparent };
             foreach (var p in pts) pOut.Points.Add(p);
             c.Children.Add(pOut);
         }
@@ -328,13 +329,15 @@ internal static class CrDraw
         c.Children.Add(poly);
     }
 
+    static double Thick(double t) => System.Math.Max(0.5, t);
+
     static void PutLine(Canvas c, double x1, double y1, double x2, double y2, Brush stroke, double thick)
     {
         c.Children.Add(new Line
         {
             X1 = x1, Y1 = y1, X2 = x2, Y2 = y2,
             Stroke              = stroke,
-            StrokeThickness     = System.Math.Max(0.5, thick),
+            StrokeThickness     = Thick(thick),
             StrokeStartLineCap  = PenLineCap.Square,
             StrokeEndLineCap    = PenLineCap.Square
         });
@@ -342,6 +345,7 @@ internal static class CrDraw
 
     static void PutEllipseFilled(Canvas c, double cx, double cy, double r, Brush fill)
     {
+        r = System.Math.Max(0.5, r);
         var e = new Ellipse { Width = r * 2, Height = r * 2, Fill = fill };
         Canvas.SetLeft(e, cx - r);
         Canvas.SetTop(e,  cy - r);
@@ -350,12 +354,13 @@ internal static class CrDraw
 
     static void PutEllipseStroked(Canvas c, double cx, double cy, double r, double thick, Brush stroke)
     {
+        r = System.Math.Max(1.0, r);
         var e = new Ellipse
         {
             Width           = r * 2,
             Height          = r * 2,
             Stroke          = stroke,
-            StrokeThickness = System.Math.Max(0.5, thick),
+            StrokeThickness = Thick(System.Math.Min(thick, r)),
             Fill            = Brushes.Transparent
         };
         Canvas.SetLeft(e, cx - r);
@@ -365,6 +370,8 @@ internal static class CrDraw
 
     static void PutRect(Canvas c, double cx, double cy, double hw, double hh, Brush fill)
     {
+        hw = System.Math.Max(0.5, hw);
+        hh = System.Math.Max(0.5, hh);
         var r = new Rectangle { Width = hw * 2, Height = hh * 2, Fill = fill };
         Canvas.SetLeft(r, cx - hw);
         Canvas.SetTop(r,  cy - hh);
