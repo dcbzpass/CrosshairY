@@ -40,6 +40,9 @@ public partial class MainWindow : Window
     private static readonly string LaunchesFile =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrosshairY", "launches.dat");
 
+    private static readonly string SettingsFile =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrosshairY", "settings.dat");
+
     private static readonly (string id, string name)[] CrTemplates =
     {
         ("dot",              "Dot"),
@@ -320,6 +323,7 @@ public partial class MainWindow : Window
             SetupSmoothScroll(MainScrollViewer);
             AnimateNavSelect(BtnCrosshairs);
             _crOverlay = new CrosshairOverlay();
+            LoadSettings();
             TryLoadLastUsed();
             InitCrosshairsPanel();
             RefreshCrosshairOverlay();
@@ -361,7 +365,8 @@ public partial class MainWindow : Window
 
     private void InitSettingsPanel()
     {
-        ProofKeyBtn.Content = DisplayKey(_s.ProofKey);
+        ProofKeyBtn.Content  = DisplayKey(_s.ProofKey);
+        CycleKeyBtn.Content  = string.IsNullOrEmpty(_s.CycleKey) ? "NONE" : DisplayKey(_s.CycleKey);
     }
 
     private void InitCrosshairsPanel()
@@ -377,11 +382,16 @@ public partial class MainWindow : Window
         UpdateTemplateTileSelection();
         UpdateColorSwatchSelection();
 
-        CrOutlineToggle.IsChecked = _s.CrOutline;
-        CrOutlineSizeSlider.Value = _s.CrOutlineSize;
-        CrSizeSlider.Value        = _s.CrSize;
-        CrOutlineSizeLabel.Text   = _s.CrOutlineSize.ToString();
-        CrSizeLabel.Text          = $"{_s.CrSize}%";
+        CrOutlineToggle.IsChecked   = _s.CrOutline;
+        CrOutlineSizeSlider.Value   = _s.CrOutlineSize;
+        CrSizeSlider.Value          = _s.CrSize;
+        CrOpacitySlider.Value       = _s.CrOpacity;
+        CrGapSlider.Value           = _s.CrGap;
+        CrOutlineSizeLabel.Text     = _s.CrOutlineSize.ToString();
+        CrSizeLabel.Text            = $"{_s.CrSize}%";
+        CrOpacityLabel.Text         = $"{_s.CrOpacity}%";
+        CrGapLabel.Text             = _s.CrGap.ToString();
+        CrHexInput.Text             = _s.CrColor;
     }
 
     private UIElement BuildTemplateTile(string id, string name)
@@ -487,7 +497,7 @@ public partial class MainWindow : Window
 
     private void RefreshCrosshairOverlay()
     {
-        _crOverlay?.UpdateCrosshair(_s.CrTemplate, _s.CrColor, _s.CrOutline, _s.CrOutlineSize, _s.CrSize);
+        _crOverlay?.UpdateCrosshair(_s.CrTemplate, _s.CrColor, _s.CrOutline, _s.CrOutlineSize, _s.CrSize, _s.CrOpacity, _s.CrGap);
     }
 
     private void CrToggle_Changed(object s, RoutedEventArgs e)
@@ -509,6 +519,54 @@ public partial class MainWindow : Window
     {
         _s.CrSize = (int)e.NewValue;
         if (CrSizeLabel != null) CrSizeLabel.Text = $"{_s.CrSize}%";
+        RefreshCrosshairOverlay();
+    }
+
+    private void CrOpacitySlider_Changed(object s, RoutedPropertyChangedEventArgs<double> e)
+    {
+        _s.CrOpacity = (int)e.NewValue;
+        if (CrOpacityLabel != null) CrOpacityLabel.Text = $"{_s.CrOpacity}%";
+        RefreshCrosshairOverlay();
+    }
+
+    private void CrGapSlider_Changed(object s, RoutedPropertyChangedEventArgs<double> e)
+    {
+        _s.CrGap = (int)e.NewValue;
+        if (CrGapLabel != null) CrGapLabel.Text = _s.CrGap.ToString();
+        if (CrTemplatePanel != null) RebuildTemplatePreviews();
+        RefreshCrosshairOverlay();
+    }
+
+    private void CrHexInput_Changed(object s, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (s is not System.Windows.Controls.TextBox tb) return;
+        var raw = tb.Text.Trim();
+        if (!raw.StartsWith('#')) raw = "#" + raw;
+        try
+        {
+            var col = (Color)ColorConverter.ConvertFromString(raw);
+            _s.CrColor = raw;
+            UpdateColorSwatchSelection();
+            RebuildTemplatePreviews();
+            RefreshCrosshairOverlay();
+            tb.Foreground = new SolidColorBrush(Color.FromRgb(0xf5, 0xf5, 0xf5));
+        }
+        catch
+        {
+            tb.Foreground = new SolidColorBrush(Color.FromRgb(0x99, 0x33, 0x33));
+        }
+    }
+
+    private static readonly Random _rng = new();
+
+    private void Randomize_Click(object s, RoutedEventArgs e)
+    {
+        _s.CrTemplate = CrTemplates[_rng.Next(CrTemplates.Length)].id;
+        _s.CrColor    = CrColors[_rng.Next(CrColors.Length)];
+        UpdateTemplateTileSelection();
+        UpdateColorSwatchSelection();
+        RebuildTemplatePreviews();
+        if (CrHexInput != null) CrHexInput.Text = _s.CrColor;
         RefreshCrosshairOverlay();
     }
 
@@ -644,7 +702,8 @@ public partial class MainWindow : Window
         _bindingBtn      = null;
     }
 
-    private void ProofKeyBtn_Click(object s, RoutedEventArgs e) => StartBinding(ProofKeyBtn, k => _s.ProofKey = k);
+    private void ProofKeyBtn_Click(object s, RoutedEventArgs e) => StartBinding(ProofKeyBtn, k => { _s.ProofKey = k; SaveSettings(); });
+    private void CycleKeyBtn_Click(object s, RoutedEventArgs e) => StartBinding(CycleKeyBtn, k => { _s.CycleKey = k; SaveSettings(); });
 
     private void OnGlobalKeyDown(string key)
     {
@@ -656,6 +715,23 @@ public partial class MainWindow : Window
 
         if (key == _s.ProofKey)
             Dispatcher.Invoke(ToggleCaptureHide);
+
+        if (!string.IsNullOrEmpty(_s.CycleKey) && key == _s.CycleKey)
+            Dispatcher.Invoke(CycleProfile);
+    }
+
+    private void CycleProfile()
+    {
+        Directory.CreateDirectory(ProfilesDir);
+        var files = Directory.GetFiles(ProfilesDir, "*.json").OrderBy(f => f).ToArray();
+        if (files.Length == 0) return;
+
+        string? lastUsed = null;
+        try { if (File.Exists(LastUsedFile)) lastUsed = File.ReadAllText(LastUsedFile).Trim(); } catch { }
+
+        int idx = Array.FindIndex(files, f => string.Equals(f, lastUsed, StringComparison.OrdinalIgnoreCase));
+        int next = (idx + 1) % files.Length;
+        LoadProfile(files[next]);
     }
 
     private void BtnProfiles_Click(object s, RoutedEventArgs e)
@@ -721,12 +797,13 @@ public partial class MainWindow : Window
             {
                 var cfg = new
                 {
-                    proof_key       = _s.ProofKey,
                     cr_template     = _s.CrTemplate,
                     cr_color        = _s.CrColor,
                     cr_outline      = _s.CrOutline,
                     cr_outline_size = _s.CrOutlineSize,
-                    cr_size         = _s.CrSize
+                    cr_size         = _s.CrSize,
+                    cr_opacity      = _s.CrOpacity,
+                    cr_gap          = _s.CrGap
                 };
                 File.WriteAllText(path, JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true }));
                 LoadProfileList();
@@ -774,12 +851,13 @@ public partial class MainWindow : Window
 
         var cfg = new
         {
-            proof_key       = _s.ProofKey,
             cr_template     = _s.CrTemplate,
             cr_color        = _s.CrColor,
             cr_outline      = _s.CrOutline,
             cr_outline_size = _s.CrOutlineSize,
-            cr_size         = _s.CrSize
+            cr_size         = _s.CrSize,
+            cr_opacity      = _s.CrOpacity,
+            cr_gap          = _s.CrGap
         };
 
         File.WriteAllText(path, JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true }));
@@ -797,6 +875,30 @@ public partial class MainWindow : Window
         catch { }
     }
 
+    private void SaveSettings()
+    {
+        try
+        {
+            Directory.CreateDirectory(AppDir);
+            var cfg = new { proof_key = _s.ProofKey, cycle_key = _s.CycleKey };
+            File.WriteAllText(SettingsFile, JsonSerializer.Serialize(cfg));
+        }
+        catch { }
+    }
+
+    private void LoadSettings()
+    {
+        try
+        {
+            if (!File.Exists(SettingsFile)) return;
+            using var doc = JsonDocument.Parse(File.ReadAllText(SettingsFile));
+            var r = doc.RootElement;
+            if (r.TryGetProp("proof_key", out var v) && !string.IsNullOrEmpty(v)) _s.ProofKey = v;
+            if (r.TryGetProp("cycle_key", out v))                                 _s.CycleKey = v;
+        }
+        catch { }
+    }
+
     private void LoadProfile(string path, bool writeLastUsed = true)
     {
         try
@@ -805,13 +907,14 @@ public partial class MainWindow : Window
             using var doc = JsonDocument.Parse(json);
             var r = doc.RootElement;
 
-            if (r.TryGetProp("proof_key",   out var v)) _s.ProofKey   = v;
-            if (r.TryGetProp("cr_template", out v))     _s.CrTemplate = v;
+            if (r.TryGetProp("cr_template", out var v)) _s.CrTemplate = v;
             if (r.TryGetProp("cr_color",    out v))     _s.CrColor    = v;
             if (r.TryGetProperty("cr_outline",      out var jv) && jv.ValueKind == JsonValueKind.True)  _s.CrOutline = true;
             if (r.TryGetProperty("cr_outline",      out jv)     && jv.ValueKind == JsonValueKind.False) _s.CrOutline = false;
             if (r.TryGetProperty("cr_outline_size", out jv) && jv.TryGetInt32(out var i)) _s.CrOutlineSize = i;
             if (r.TryGetProperty("cr_size",         out jv) && jv.TryGetInt32(out i))     _s.CrSize        = i;
+            if (r.TryGetProperty("cr_opacity",      out jv) && jv.TryGetInt32(out i))     _s.CrOpacity     = i;
+            if (r.TryGetProperty("cr_gap",          out jv) && jv.TryGetInt32(out i))     _s.CrGap         = i;
 
             if (writeLastUsed)
             {
@@ -819,7 +922,6 @@ public partial class MainWindow : Window
                 File.WriteAllText(LastUsedFile, path);
             }
 
-            InitSettingsPanel();
             InitCrosshairsPanel();
             RefreshCrosshairOverlay();
         }
