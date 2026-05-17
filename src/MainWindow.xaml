@@ -70,7 +70,7 @@
                                            FontSize="13"
                                            Foreground="#f5f5f5"
                                            VerticalAlignment="Center"/>
-                                <TextBlock Text=" — v1.0.2"
+                                <TextBlock Text=" v1.0.3"
                                            FontFamily="{StaticResource IBMPlexMono}"
                                            FontSize="9"
                                            Foreground="#2a2a2a"
@@ -156,11 +156,18 @@
                                     <Border BorderBrush="#1e1e1e" BorderThickness="1"
                                             Background="#0f0f0f" Margin="0,0,0,10">
                                         <StackPanel Margin="18,16,18,18">
-                                            <TextBlock Text="TEMPLATE"
-                                                       FontFamily="{StaticResource BebasNeue}"
-                                                       FontSize="18"
-                                                       Foreground="#f5f5f5"
-                                                       Margin="0,0,0,4"/>
+                                            <Grid Margin="0,0,0,4">
+                                                <TextBlock Text="TEMPLATE"
+                                                           FontFamily="{StaticResource BebasNeue}"
+                                                           FontSize="18"
+                                                           Foreground="#f5f5f5"
+                                                           VerticalAlignment="Center"/>
+                                                <Button Content="RANDOMIZE"
+                                                        Style="{StaticResource DarkBtn}"
+                                                        HorizontalAlignment="Right"
+                                                        Width="90"
+                                                        Click="Randomize_Click"/>
+                                            </Grid>
                                             <TextBlock Text="Click a style to select it — click again to deselect"
                                                        FontFamily="{StaticResource IBMPlexMono}"
                                                        FontSize="9"
@@ -183,7 +190,12 @@
                                                        FontFamily="{StaticResource IBMPlexMono}"
                                                        FontSize="9" Foreground="#5a5a5a"
                                                        Margin="0,0,0,8"/>
-                                            <WrapPanel x:Name="CrColorPanel" Margin="0,0,0,16"/>
+                                            <WrapPanel x:Name="CrColorPanel" Margin="0,0,0,8"/>
+                                            <TextBox x:Name="CrHexInput"
+                                                     Style="{StaticResource DarkEntry}"
+                                                     MaxLength="9"
+                                                     Margin="0,0,0,16"
+                                                     TextChanged="CrHexInput_Changed"/>
 
                                             <Border BorderBrush="#1e1e1e" BorderThickness="0,0,0,1"
                                                     Margin="0,0,0,14" Padding="0,0,0,14">
@@ -236,7 +248,39 @@
                                             <Slider x:Name="CrSizeSlider"
                                                     Style="{StaticResource DarkSlider}"
                                                     Minimum="50" Maximum="200" Value="100"
+                                                    Margin="0,0,0,16"
                                                     ValueChanged="CrSizeSlider_Changed"/>
+
+                                            <Grid Margin="0,0,0,8">
+                                                <TextBlock Text="OPACITY (%)"
+                                                           FontFamily="{StaticResource IBMPlexMono}"
+                                                           FontSize="9" Foreground="#5a5a5a"/>
+                                                <TextBlock x:Name="CrOpacityLabel"
+                                                           FontFamily="{StaticResource IBMPlexMono}"
+                                                           FontSize="9" FontWeight="Bold"
+                                                           Foreground="#f5f5f5"
+                                                           HorizontalAlignment="Right"/>
+                                            </Grid>
+                                            <Slider x:Name="CrOpacitySlider"
+                                                    Style="{StaticResource DarkSlider}"
+                                                    Minimum="10" Maximum="100" Value="100"
+                                                    Margin="0,0,0,16"
+                                                    ValueChanged="CrOpacitySlider_Changed"/>
+
+                                            <Grid Margin="0,0,0,8">
+                                                <TextBlock Text="CENTER GAP"
+                                                           FontFamily="{StaticResource IBMPlexMono}"
+                                                           FontSize="9" Foreground="#5a5a5a"/>
+                                                <TextBlock x:Name="CrGapLabel"
+                                                           FontFamily="{StaticResource IBMPlexMono}"
+                                                           FontSize="9" FontWeight="Bold"
+                                                           Foreground="#f5f5f5"
+                                                           HorizontalAlignment="Right"/>
+                                            </Grid>
+                                            <Slider x:Name="CrGapSlider"
+                                                    Style="{StaticResource DarkSlider}"
+                                                    Minimum="0" Maximum="20" Value="3"
+                                                    ValueChanged="CrGapSlider_Changed"/>
                                         </StackPanel>
                                     </Border>
 
@@ -341,6 +385,19 @@
                                                     Style="{StaticResource DarkBtn}"
                                                     HorizontalAlignment="Stretch"
                                                     Click="ProofKeyBtn_Click"/>
+
+                                            <TextBlock Text="PROFILE CYCLE KEY"
+                                                       FontFamily="{StaticResource IBMPlexMono}"
+                                                       FontSize="9" Foreground="#5a5a5a"
+                                                       Margin="0,14,0,0"/>
+                                            <TextBlock Text="Cycle through saved profiles without opening the UI"
+                                                       FontFamily="{StaticResource IBMPlexMono}"
+                                                       FontSize="9" Foreground="#5a5a5a"
+                                                       Margin="0,3,0,8"/>
+                                            <Button x:Name="CycleKeyBtn"
+                                                    Style="{StaticResource DarkBtn}"
+                                                    HorizontalAlignment="Stretch"
+                                                    Click="CycleKeyBtn_Click"/>
                                         </StackPanel>
                                     </Border>
 
