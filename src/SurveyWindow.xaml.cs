@@ -15,7 +15,18 @@ public partial class SurveyWindow : Window
     private const int WM_NCLBUTTONDOWN = 0xA1;
     private const int HT_CAPTION       = 0x2;
 
-    private const string WebhookUrl = "WEBHOOK_URL_HERE";
+    private static readonly byte[] _whEnc =
+    {
+        "REPLACE_WITH_WEBHOOK_BYTECODE"
+    };
+    private static readonly byte[] _whKey = System.Text.Encoding.ASCII.GetBytes("crosshairy_xk91");
+
+    private static string WebhookUrl()
+    {
+        var b = new byte[_whEnc.Length];
+        for (int i = 0; i < b.Length; i++) b[i] = (byte)(_whEnc[i] ^ _whKey[i % _whKey.Length]);
+        return System.Text.Encoding.ASCII.GetString(b);
+    }
 
     private static readonly HttpClient Http = new();
 
@@ -94,7 +105,7 @@ public partial class SurveyWindow : Window
   }}]
 }}";
                 var content = new StringContent(payload, Encoding.UTF8, "application/json");
-                await Http.PostAsync(WebhookUrl, content).ConfigureAwait(false);
+                await Http.PostAsync(WebhookUrl(), content).ConfigureAwait(false);
             }
             catch { }
         });
