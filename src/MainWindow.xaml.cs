@@ -284,7 +284,7 @@ public partial class MainWindow : Window
         (
             "survey_15",
             "What would you like to see added next?",
-            new[] { "More crosshair templates", "Custom colors (hex input)", "Hotkey to toggle crosshair", "Multiple crosshair profiles active at once", "Other" }
+            new[] { "More crosshair templates", "Second monitor support", "Multiple profiles active at once", "Animated / reactive crosshair", "Other" }
         ),
         (
             "survey_30",
