@@ -124,15 +124,16 @@ CrosshairY/
 |   +-- AppState.cs                 - runtime state
 |   +-- GlobalKeyboardHook.cs       - low-level keyboard hook
 |   +-- MainWindow.xaml             - main UI layout
-|   +-- MainWindow.xaml.cs          - UI logic
+|   +-- MainWindow.xaml.cs          - UI logic, color picker, builder, profiles
 |   +-- CrosshairOverlay.xaml       - transparent overlay window
-|   +-- CrosshairOverlay.xaml.cs    - crosshair draw logic
+|   +-- CrosshairOverlay.xaml.cs    - crosshair draw logic (CrDraw)
 |   +-- SurveyWindow.xaml           - survey popup layout
 |   +-- SurveyWindow.xaml.cs        - survey logic and webhook
 |
 +-- Fonts/                          - Bebas Neue + IBM Plex Mono
 +-- App.xaml                        - styles and resources
 +-- App.xaml.cs                     - global exception handling
++-- GlobalUsings.cs                 - shared global using directives
 +-- CrosshairY.csproj
 +-- app.manifest                    - DPI awareness
 +-- encode_webhook.py               - tool to encode a custom webhook url
