@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace CrosshairY;
 
@@ -21,11 +22,23 @@ public partial class CrosshairOverlay : Window
     [DllImport("user32.dll", SetLastError = true)]
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
+        int X, int Y, int cx, int cy, uint uFlags);
+
     private const int GWL_EXSTYLE       = -20;
     private const int WS_EX_LAYERED     = 0x00080000;
     private const int WS_EX_TRANSPARENT = 0x00000020;
     private const int WS_EX_TOOLWINDOW  = 0x00000080;
     private const int WS_EX_APPWINDOW   = 0x00040000;
+
+    private static readonly IntPtr HWND_TOPMOST = new(-1);
+    private const uint SWP_NOSIZE     = 0x0001;
+    private const uint SWP_NOMOVE     = 0x0002;
+    private const uint SWP_NOACTIVATE = 0x0010;
+
+    private IntPtr _hwnd;
+    private DispatcherTimer? _topmostTimer;
 
     public CrosshairOverlay()
     {
@@ -37,13 +50,37 @@ public partial class CrosshairOverlay : Window
 
         SourceInitialized += (_, _) =>
         {
-            var hwnd = new WindowInteropHelper(this).Handle;
-            SetWindowDisplayAffinity(hwnd, WDA_NONE);
-            int ex = GetWindowLong(hwnd, GWL_EXSTYLE);
+            _hwnd = new WindowInteropHelper(this).Handle;
+            SetWindowDisplayAffinity(_hwnd, WDA_NONE);
+            int ex = GetWindowLong(_hwnd, GWL_EXSTYLE);
             ex |=  WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW;
             ex &= ~WS_EX_APPWINDOW;
-            SetWindowLong(hwnd, GWL_EXSTYLE, ex);
+            SetWindowLong(_hwnd, GWL_EXSTYLE, ex);
+
+            ReassertTopmost();
+
+            // Fullscreen games keep grabbing the topmost slot when they take
+            // focus, which pushes the crosshair behind them. Periodically
+            // re-assert our topmost z-order (without stealing focus) so the
+            // overlay stays visible over borderless / fullscreen-optimized games.
+            _topmostTimer = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromMilliseconds(250)
+            };
+            _topmostTimer.Tick += (_, _) => ReassertTopmost();
+            _topmostTimer.Start();
         };
+
+        Closed += (_, _) => _topmostTimer?.Stop();
+    }
+
+    // Pin the window to the top of the z-order. SWP_NOACTIVATE keeps the game
+    // focused so we never interfere with its input.
+    private void ReassertTopmost()
+    {
+        if (!IsVisible || _hwnd == IntPtr.Zero) return;
+        SetWindowPos(_hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     }
 
     public void SetProof(bool active)
