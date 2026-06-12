@@ -23,13 +23,15 @@ CrosshairY draws a persistent crosshair directly on your screen as a transparent
 ## Features
 
 - **17 crosshair templates** - Dot, Ring, Square, Thin Cross, Thick Cross, Cross·, T-Shape, Circle+, Small Plus, Large Plus, Sniper, X Cross, X·, Arrows, Chevrons, Triangle, Diamond
-- **8 color swatches** with live preview plus free **hex color input**
+- **8 color swatches** with live preview plus a full **custom color picker** - square saturation/value field, hue bar and free hex input
+- **Crosshair builder** - draw your own pixel crosshair on a 15x15, 30x30 or 60x60 grid with a 16-color palette, draw/erase modes and clear
 - **Randomize button** - picks a random template and color instantly
 - **Outline toggle** with adjustable thickness (1-5)
 - **Size slider** from 50% to 200%
 - **Opacity slider** from 10% to 100%
 - **Center gap slider** - control the gap between crosshair arms (0-20)
 - **Profile system** - save, load, overwrite and delete configs stored locally in `%APPDATA%\CrosshairY\Configs`. Drop a friend's `.json` in the folder and hit reload
+- **Share codes** - export the current config to the clipboard as a compact code and import a friend's code in one click
 - **Last used config** auto-loads on startup
 - **Proof mode** - hides the window from screen capture software with a single keypress
 - **Profile cycle hotkey** - cycle through saved profiles without opening the UI
@@ -81,9 +83,11 @@ Configs are plain `.json` files stored in `%APPDATA%\CrosshairY\Configs\`.
 - **Save** - type a name in the Profiles tab and hit Save
 - **Load** - click Load next to any config to apply it instantly
 - **Overwrite** - hit Save next to an existing config to update it with your current settings
-- **Share** - paste a friend's `.json` into the folder and hit Reload to see it appear
+- **Share file** - paste a friend's `.json` into the folder and hit Reload to see it appear
+- **Export code** - copies the current config to the clipboard as a `CY1:` share code
+- **Import code** - reads a `CY1:` code from the clipboard and saves it as a profile (named from the box, or `imported`)
 
-The last loaded config is remembered and auto-applied on the next launch.
+A profile stores the template, color, outline, size, opacity, gap and any custom builder crosshair. The last loaded config is remembered and auto-applied on the next launch.
 
 Hotkeys (proof key, cycle key) are global settings and are stored separately in `%APPDATA%\CrosshairY\settings.dat`. They are never overwritten by loading a profile.
 
