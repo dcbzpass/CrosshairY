@@ -111,7 +111,6 @@ public partial class App : System.Windows.Application
         itemExit.MouseLeave += (_, _) => itemExit.ForeColor = red;
         itemExit.Click      += (_, _) =>
         {
-            // hard exit: skip the X-button goodbye animation entirely
             _tray!.Visible = false;
             _tray.Dispose();
             Dispatcher.Invoke(() =>

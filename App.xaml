@@ -231,7 +231,6 @@
             </Setter>
         </Style>
 
-        <!-- survey option button: same base as DarkBtn but left-aligned text and slightly taller -->
         <Style x:Key="SurveyOptionBtn" TargetType="Button">
             <Setter Property="OverridesDefaultStyle"      Value="True"/>
             <Setter Property="Background"                 Value="#0f0f0f"/>

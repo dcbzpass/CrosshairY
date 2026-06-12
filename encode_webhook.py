@@ -33,7 +33,6 @@ def main():
 
     encoded = encode(url)
 
-    # verify round-trip before printing
     decoded = decode(encoded)
     if decoded != url:
         print("error: round-trip check failed. url was not encoded correctly.")

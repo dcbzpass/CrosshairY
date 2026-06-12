@@ -144,7 +144,6 @@
                                       Padding="0,0,2,0">
                             <Grid>
 
-                                <!-- crosshairs panel -->
                                 <StackPanel x:Name="CrosshairsPanel" Margin="28,24,28,28">
 
                                     <TextBlock Text="CROSSHAIRS"
@@ -292,7 +291,6 @@
 
                                 </StackPanel>
 
-                                <!-- profiles panel -->
                                 <StackPanel x:Name="ProfilesPanel" Margin="28,24,28,28" Visibility="Collapsed">
 
                                     <TextBlock Text="PROFILES"
@@ -338,7 +336,6 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <!-- clipboard import / export -->
                                     <Border BorderBrush="#1e1e1e" BorderThickness="1"
                                             Background="#0f0f0f" Margin="0,0,0,10">
                                         <StackPanel Margin="18,16,18,18">
@@ -392,7 +389,6 @@
 
                                 </StackPanel>
 
-                                <!-- builder panel -->
                                 <StackPanel x:Name="BuilderPanel" Margin="28,24,28,28" Visibility="Collapsed">
 
                                     <TextBlock Text="BUILDER"
@@ -407,7 +403,6 @@
                                                Margin="0,0,0,18"/>
                                     <Rectangle Height="1" Fill="#1e1e1e" Margin="0,0,0,18"/>
 
-                                    <!-- color palette + mode controls -->
                                     <Border BorderBrush="#1e1e1e" BorderThickness="1"
                                             Background="#0f0f0f" Margin="0,0,0,10">
                                         <StackPanel Margin="18,16,18,18">
@@ -467,7 +462,6 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <!-- drawing canvas -->
                                     <Border BorderBrush="#1e1e1e" BorderThickness="1"
                                             Background="#0f0f0f" Margin="0,0,0,10">
                                         <StackPanel Margin="18,16,18,18">
@@ -482,7 +476,6 @@
                                                        Foreground="#5a5a5a"
                                                        Margin="0,0,0,14"/>
 
-                                            <!-- center the grid horizontally -->
                                             <Grid x:Name="BuilderGridHost" HorizontalAlignment="Center"/>
 
                                             <Button Content="APPLY TO OVERLAY"
@@ -495,7 +488,6 @@
 
                                 </StackPanel>
 
-                                <!-- settings panel -->
                                 <StackPanel x:Name="SettingsPanel" Margin="28,24,28,28" Visibility="Collapsed">
 
                                     <TextBlock Text="SETTINGS"
@@ -547,7 +539,6 @@
 
                                 </StackPanel>
 
-                                <!-- support panel -->
                                 <StackPanel x:Name="SupportPanel" Margin="28,24,28,28" Visibility="Collapsed">
 
                                     <TextBlock Text="SUPPORT"

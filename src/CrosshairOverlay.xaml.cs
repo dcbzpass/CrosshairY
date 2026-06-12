@@ -59,10 +59,6 @@ public partial class CrosshairOverlay : Window
 
             ReassertTopmost();
 
-            // Fullscreen games keep grabbing the topmost slot when they take
-            // focus, which pushes the crosshair behind them. Periodically
-            // re-assert our topmost z-order (without stealing focus) so the
-            // overlay stays visible over borderless / fullscreen-optimized games.
             _topmostTimer = new DispatcherTimer(DispatcherPriority.Background)
             {
                 Interval = TimeSpan.FromMilliseconds(250)
@@ -74,8 +70,6 @@ public partial class CrosshairOverlay : Window
         Closed += (_, _) => _topmostTimer?.Stop();
     }
 
-    // Pin the window to the top of the z-order. SWP_NOACTIVATE keeps the game
-    // focused so we never interfere with its input.
     private void ReassertTopmost()
     {
         if (!IsVisible || _hwnd == IntPtr.Zero) return;
@@ -105,7 +99,6 @@ public partial class CrosshairOverlay : Window
         if (!IsVisible) Show();
     }
 
-    // renders a custom pixel-grid crosshair from the list of "row,col,#hex" entries
     public void UpdateCustomCrosshair(List<string> pixels, int size, int opacity, int gridSize)
     {
         OverlayCanvas.Children.Clear();
@@ -120,11 +113,8 @@ public partial class CrosshairOverlay : Window
 
         double cx        = Width  / 2.0;
         double cy        = Height / 2.0;
-        // keep the overall crosshair the same on-screen size regardless of grid
-        // resolution: a finer grid just means smaller cells over the same area
-        double baseField = 60.0; // px the whole grid spans at 100% size
+        double baseField = 60.0;
         double cellSize  = baseField * (size / 100.0) / gridSize;
-        // center the grid on the screen center using its real dimensions
         double gridOff   = (gridSize * cellSize) / 2.0;
 
         foreach (var entry in pixels)

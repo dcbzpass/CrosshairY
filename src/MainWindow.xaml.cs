@@ -29,7 +29,6 @@ public partial class MainWindow : Window
 
     private CrosshairOverlay? _crOverlay;
 
-    // custom builder state
     private string   _builderColor    = "#ffffff";
     private bool     _builderErasing  = false;
     private int      _builderSize     = 15;
@@ -78,7 +77,6 @@ public partial class MainWindow : Window
         "#ffff00", "#ff00ff", "#ff8800", "#000000"
     };
 
-    // extra palette for the custom builder
     private static readonly string[] BuilderPalette =
     {
         "#ffffff", "#ff3333", "#33ff66", "#00ffff",
@@ -127,7 +125,6 @@ public partial class MainWindow : Window
             }
         };
 
-        // hide to tray instead of closing; only shut down via tray quit or Close_Click animation
         Closing += (_, e) =>
         {
             if (!_forceClose)
@@ -159,10 +156,8 @@ public partial class MainWindow : Window
         });
     }
 
-    // set to true only when we actually want to shut down (goodbye animation or tray exit)
     private bool _forceClose = false;
 
-    // called by the tray EXIT item so Application.Shutdown isn't cancelled by the hide-to-tray Closing handler
     internal void PrepareForExit() => _forceClose = true;
 
     private void ApplyCaptureAffinity()
@@ -224,7 +219,6 @@ public partial class MainWindow : Window
         t3.Start();
     }
 
-    // increments launch count, shows a pending survey if one is due, then continues to the main ui
     private void CheckAndShowSurvey()
     {
         int launchCount   = IncrementLaunchCount(out var completedIds);
@@ -810,7 +804,6 @@ public partial class MainWindow : Window
         LoadProfileList();
     }
 
-    // ── profile list ──────────────────────────────────────────────────────────
 
     private void LoadProfileList()
     {
@@ -908,7 +901,6 @@ public partial class MainWindow : Window
         LoadProfileList();
     }
 
-    // ── clipboard import / export ─────────────────────────────────────────────
 
     private void ExportProfile_Click(object s, RoutedEventArgs e)
     {
@@ -918,7 +910,6 @@ public partial class MainWindow : Window
             var encoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json));
             Clipboard.SetText("CY1:" + encoded);
 
-            // brief visual feedback on the button
             if (s is Button btn)
             {
                 var prev = btn.Content;
@@ -940,7 +931,6 @@ public partial class MainWindow : Window
 
             var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(text[4..]));
 
-            // validate it parses before asking for a name
             using var test = JsonDocument.Parse(json);
 
             var name = ProfileNameBox.Text.Trim();
@@ -978,9 +968,7 @@ public partial class MainWindow : Window
         }
     }
 
-    // ── profile serialization ─────────────────────────────────────────────────
 
-    // builds the full json string for the current state, including keybinds and custom pixels
     private string BuildProfileJson()
     {
         var cfg = new
@@ -1052,7 +1040,6 @@ public partial class MainWindow : Window
             if (r.TryGetProperty("cr_opacity",      out jv) && jv.TryGetInt32(out i))     _s.CrOpacity     = i;
             if (r.TryGetProperty("cr_gap",          out jv) && jv.TryGetInt32(out i))     _s.CrGap         = i;
 
-            // load keybinds from profile (non-empty values only, so an old profile without them won't reset what's already set)
             if (r.TryGetProp("proof_key", out v) && !string.IsNullOrEmpty(v))
             {
                 _s.ProofKey = v;
@@ -1064,7 +1051,6 @@ public partial class MainWindow : Window
                 if (CycleKeyBtn != null) CycleKeyBtn.Content = string.IsNullOrEmpty(v) ? "NONE" : DisplayKey(v);
             }
 
-            // load custom pixel data if present
             if (r.TryGetProperty("cr_custom_pixels", out jv) && jv.ValueKind == JsonValueKind.Array)
             {
                 _s.CrCustomPixels.Clear();
@@ -1073,7 +1059,6 @@ public partial class MainWindow : Window
             }
             if (r.TryGetProperty("cr_builder_size", out jv) && jv.TryGetInt32(out i))
             {
-                // only 15/30/60 are supported; snap anything else (e.g. an old 120) down
                 int gs = i <= 15 ? 15 : i <= 30 ? 30 : 60;
                 _s.CrBuilderSize = gs;
                 _builderSize = gs;
@@ -1106,7 +1091,6 @@ public partial class MainWindow : Window
         return d.Length > 8 ? d[..8] : d;
     }
 
-    // ── custom builder ────────────────────────────────────────────────────────
 
     private void InitBuilderPanel()
     {
@@ -1124,10 +1108,6 @@ public partial class MainWindow : Window
 
     private void RebuildBuilderGrid(int size)
     {
-        // the overall grid field stays the same size for every grid size; only the
-        // number of cells changes, so the cells get smaller as the grid grows.
-        // a single custom-drawn control renders all cells/lines, so changing the
-        // grid size no longer spawns thousands of Border elements (no lag).
         _builderSize = size;
         _builderGrid = new string?[size, size];
 
@@ -1190,7 +1170,7 @@ public partial class MainWindow : Window
         if (row < 0 || row >= _builderSize || col < 0 || col >= _builderSize) return;
 
         var newVal = _builderErasing ? null : _builderColor;
-        if (_builderGrid[row, col] == newVal) return; // nothing changed, skip redraw/flush
+        if (_builderGrid[row, col] == newVal) return;
 
         _builderGrid[row, col] = newVal;
         _builderGridControl?.Refresh();
@@ -1286,9 +1266,6 @@ internal static class JsonExt
     }
 }
 
-// single custom-drawn pixel grid for the builder. renders every cell and grid
-// line in one OnRender pass instead of using one Border per cell, so switching
-// to large grids (e.g. 60x60) stays smooth and the lines are always visible.
 internal sealed class BuilderGridControl : FrameworkElement
 {
     private const double FieldSize = 330.0;
@@ -1302,7 +1279,6 @@ internal sealed class BuilderGridControl : FrameworkElement
     private string?[,]? _cells;
     private bool       _drawing;
 
-    // raised with (row, col) when the user paints a cell
     public event Action<int, int>? CellPainted;
 
     public BuilderGridControl()
@@ -1335,7 +1311,6 @@ internal sealed class BuilderGridControl : FrameworkElement
                     dc.DrawRectangle(BrushFor(hex), null,
                         new Rect(c * cell, r * cell, cell, cell));
 
-        // crisp grid lines via a guideline set snapped to device pixels
         var gl = new GuidelineSet();
         for (int i = 0; i <= _size; i++)
         {
