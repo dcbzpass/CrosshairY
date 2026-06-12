@@ -1,0 +1,13 @@
+global using Application     = System.Windows.Application;
+global using Brush           = System.Windows.Media.Brush;
+global using Brushes         = System.Windows.Media.Brushes;
+global using Button          = System.Windows.Controls.Button;
+global using Clipboard       = System.Windows.Clipboard;
+global using Color           = System.Windows.Media.Color;
+global using ColorConverter  = System.Windows.Media.ColorConverter;
+global using Cursors         = System.Windows.Input.Cursors;
+global using FontFamily      = System.Windows.Media.FontFamily;
+global using Pen             = System.Windows.Media.Pen;
+global using Point           = System.Windows.Point;
+global using Rectangle       = System.Windows.Shapes.Rectangle;
+global using SolidColorBrush = System.Windows.Media.SolidColorBrush;

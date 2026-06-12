@@ -12,6 +12,7 @@
     <ApplicationIcon>CrosshairY.ico</ApplicationIcon>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
+    <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
   <ItemGroup>

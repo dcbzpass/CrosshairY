@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -27,6 +28,13 @@ public partial class MainWindow : Window
     private Button? _activeNavBtn;
 
     private CrosshairOverlay? _crOverlay;
+
+    // custom builder state
+    private string   _builderColor    = "#ffffff";
+    private bool     _builderErasing  = false;
+    private int      _builderSize     = 15;
+    private string?[,] _builderGrid  = new string?[15, 15];
+    private BuilderGridControl? _builderGridControl;
 
     private static readonly string AppDir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrosshairY");
@@ -70,6 +78,15 @@ public partial class MainWindow : Window
         "#ffff00", "#ff00ff", "#ff8800", "#000000"
     };
 
+    // extra palette for the custom builder
+    private static readonly string[] BuilderPalette =
+    {
+        "#ffffff", "#ff3333", "#33ff66", "#00ffff",
+        "#ffff00", "#ff00ff", "#ff8800", "#000000",
+        "#aaaaaa", "#555555", "#ff6666", "#66ff99",
+        "#66ccff", "#ffcc00", "#ff66ff", "#ff9944"
+    };
+
     [DllImport("user32.dll")] private static extern bool ReleaseCapture();
     [DllImport("user32.dll")] private static extern int  SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
     private const int WM_NCLBUTTONDOWN = 0xA1;
@@ -110,6 +127,16 @@ public partial class MainWindow : Window
             }
         };
 
+        // hide to tray instead of closing; only shut down via tray quit or Close_Click animation
+        Closing += (_, e) =>
+        {
+            if (!_forceClose)
+            {
+                e.Cancel = true;
+                Hide();
+            }
+        };
+
         Closed += (_, _) =>
         {
             _hook?.Dispose();
@@ -131,6 +158,12 @@ public partial class MainWindow : Window
             BeginAnimation(OpacityProperty, windowFade);
         });
     }
+
+    // set to true only when we actually want to shut down (goodbye animation or tray exit)
+    private bool _forceClose = false;
+
+    // called by the tray EXIT item so Application.Shutdown isn't cancelled by the hide-to-tray Closing handler
+    internal void PrepareForExit() => _forceClose = true;
 
     private void ApplyCaptureAffinity()
     {
@@ -326,6 +359,7 @@ public partial class MainWindow : Window
             LoadSettings();
             TryLoadLastUsed();
             InitCrosshairsPanel();
+            InitBuilderPanel();
             RefreshCrosshairOverlay();
         };
         StartupGrid.BeginAnimation(OpacityProperty, fade);
@@ -410,7 +444,7 @@ public partial class MainWindow : Window
             FontFamily          = (FontFamily)FindResource("IBMPlexMono"),
             FontSize            = 8,
             Foreground          = new SolidColorBrush(Color.FromRgb(0x5a, 0x5a, 0x5a)),
-            HorizontalAlignment = HorizontalAlignment.Center,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
             Margin              = new Thickness(0, 4, 0, 0)
         };
 
@@ -497,7 +531,10 @@ public partial class MainWindow : Window
 
     private void RefreshCrosshairOverlay()
     {
-        _crOverlay?.UpdateCrosshair(_s.CrTemplate, _s.CrColor, _s.CrOutline, _s.CrOutlineSize, _s.CrSize, _s.CrOpacity, _s.CrGap);
+        if (_s.CrTemplate == "custom")
+            _crOverlay?.UpdateCustomCrosshair(_s.CrCustomPixels, _s.CrSize, _s.CrOpacity, _s.CrBuilderSize);
+        else
+            _crOverlay?.UpdateCrosshair(_s.CrTemplate, _s.CrColor, _s.CrOutline, _s.CrOutlineSize, _s.CrSize, _s.CrOpacity, _s.CrGap);
     }
 
     private void CrToggle_Changed(object s, RoutedEventArgs e)
@@ -537,6 +574,19 @@ public partial class MainWindow : Window
         RefreshCrosshairOverlay();
     }
 
+    private static readonly Random _rng = new();
+
+    private void Randomize_Click(object s, RoutedEventArgs e)
+    {
+        _s.CrTemplate = CrTemplates[_rng.Next(CrTemplates.Length)].id;
+        _s.CrColor    = CrColors[_rng.Next(CrColors.Length)];
+        UpdateTemplateTileSelection();
+        UpdateColorSwatchSelection();
+        RebuildTemplatePreviews();
+        if (CrHexInput != null) CrHexInput.Text = _s.CrColor;
+        RefreshCrosshairOverlay();
+    }
+
     private void CrHexInput_Changed(object s, System.Windows.Controls.TextChangedEventArgs e)
     {
         if (s is not System.Windows.Controls.TextBox tb) return;
@@ -557,19 +607,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private static readonly Random _rng = new();
-
-    private void Randomize_Click(object s, RoutedEventArgs e)
-    {
-        _s.CrTemplate = CrTemplates[_rng.Next(CrTemplates.Length)].id;
-        _s.CrColor    = CrColors[_rng.Next(CrColors.Length)];
-        UpdateTemplateTileSelection();
-        UpdateColorSwatchSelection();
-        RebuildTemplatePreviews();
-        if (CrHexInput != null) CrHexInput.Text = _s.CrColor;
-        RefreshCrosshairOverlay();
-    }
-
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton == MouseButton.Left)
@@ -582,6 +619,11 @@ public partial class MainWindow : Window
     private void Minimize_Click(object s, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
     private void Close_Click(object s, RoutedEventArgs e)
+    {
+        PlayGoodbyeAndShutdown();
+    }
+
+    private void PlayGoodbyeAndShutdown()
     {
         GoodbyeOverlay.Visibility = Visibility.Visible;
 
@@ -616,7 +658,11 @@ public partial class MainWindow : Window
         {
             timer.Stop();
             var fadeOut = new DoubleAnimation(1, 0, new Duration(TimeSpan.FromMilliseconds(350))) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
-            fadeOut.Completed += (_, _) => Application.Current.Shutdown();
+            fadeOut.Completed += (_, _) =>
+            {
+                _forceClose = true;
+                Application.Current.Shutdown();
+            };
             BeginAnimation(OpacityProperty, fadeOut);
         };
         timer.Start();
@@ -642,6 +688,7 @@ public partial class MainWindow : Window
         SettingsPanel.Visibility   = Visibility.Collapsed;
         ProfilesPanel.Visibility   = Visibility.Collapsed;
         SupportPanel.Visibility    = Visibility.Collapsed;
+        BuilderPanel.Visibility    = Visibility.Collapsed;
         FadeInPanel(CrosshairsPanel);
         AnimateNavSelect(BtnCrosshairs);
         _scrollTarget = 0;
@@ -654,6 +701,7 @@ public partial class MainWindow : Window
         CrosshairsPanel.Visibility = Visibility.Collapsed;
         ProfilesPanel.Visibility   = Visibility.Collapsed;
         SupportPanel.Visibility    = Visibility.Collapsed;
+        BuilderPanel.Visibility    = Visibility.Collapsed;
         FadeInPanel(SettingsPanel);
         AnimateNavSelect(BtnSettings);
         _scrollTarget = 0;
@@ -666,8 +714,22 @@ public partial class MainWindow : Window
         CrosshairsPanel.Visibility = Visibility.Collapsed;
         ProfilesPanel.Visibility   = Visibility.Collapsed;
         SettingsPanel.Visibility   = Visibility.Collapsed;
+        BuilderPanel.Visibility    = Visibility.Collapsed;
         FadeInPanel(SupportPanel);
         AnimateNavSelect(BtnSupport);
+        _scrollTarget = 0;
+        MainScrollViewer.ScrollToTop();
+    }
+
+    private void BtnBuilder_Click(object s, RoutedEventArgs e)
+    {
+        BuilderPanel.Visibility    = Visibility.Visible;
+        CrosshairsPanel.Visibility = Visibility.Collapsed;
+        ProfilesPanel.Visibility   = Visibility.Collapsed;
+        SettingsPanel.Visibility   = Visibility.Collapsed;
+        SupportPanel.Visibility    = Visibility.Collapsed;
+        FadeInPanel(BuilderPanel);
+        AnimateNavSelect(BtnBuilder);
         _scrollTarget = 0;
         MainScrollViewer.ScrollToTop();
     }
@@ -729,7 +791,7 @@ public partial class MainWindow : Window
         string? lastUsed = null;
         try { if (File.Exists(LastUsedFile)) lastUsed = File.ReadAllText(LastUsedFile).Trim(); } catch { }
 
-        int idx = Array.FindIndex(files, f => string.Equals(f, lastUsed, StringComparison.OrdinalIgnoreCase));
+        int idx  = Array.FindIndex(files, f => string.Equals(f, lastUsed, StringComparison.OrdinalIgnoreCase));
         int next = (idx + 1) % files.Length;
         LoadProfile(files[next]);
     }
@@ -740,12 +802,15 @@ public partial class MainWindow : Window
         CrosshairsPanel.Visibility = Visibility.Collapsed;
         SettingsPanel.Visibility   = Visibility.Collapsed;
         SupportPanel.Visibility    = Visibility.Collapsed;
+        BuilderPanel.Visibility    = Visibility.Collapsed;
         FadeInPanel(ProfilesPanel);
         AnimateNavSelect(BtnProfiles);
         _scrollTarget = 0;
         MainScrollViewer.ScrollToTop();
         LoadProfileList();
     }
+
+    // ── profile list ──────────────────────────────────────────────────────────
 
     private void LoadProfileList()
     {
@@ -786,7 +851,7 @@ public partial class MainWindow : Window
                 Foreground        = new SolidColorBrush(isActive
                     ? Color.FromRgb(0xf5, 0xf5, 0xf5)
                     : Color.FromRgb(0x8a, 0x8a, 0x8a)),
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = System.Windows.VerticalAlignment.Center
             };
 
             var loadBtn = new Button { Content = "LOAD", Style = (Style)FindResource("DarkBtn"), Width = 60, Tag = path };
@@ -795,17 +860,7 @@ public partial class MainWindow : Window
             var saveBtn = new Button { Content = "SAVE", Style = (Style)FindResource("DarkBtn"), Width = 60, Margin = new Thickness(6, 0, 0, 0), Tag = path };
             saveBtn.Click += (_, _) =>
             {
-                var cfg = new
-                {
-                    cr_template     = _s.CrTemplate,
-                    cr_color        = _s.CrColor,
-                    cr_outline      = _s.CrOutline,
-                    cr_outline_size = _s.CrOutlineSize,
-                    cr_size         = _s.CrSize,
-                    cr_opacity      = _s.CrOpacity,
-                    cr_gap          = _s.CrGap
-                };
-                File.WriteAllText(path, JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true }));
+                File.WriteAllText(path, BuildProfileJson(), System.Text.Encoding.UTF8);
                 LoadProfileList();
             };
 
@@ -849,19 +904,100 @@ public partial class MainWindow : Window
         Directory.CreateDirectory(ProfilesDir);
         var path = Path.Combine(ProfilesDir, name + ".json");
 
+        File.WriteAllText(path, BuildProfileJson(), System.Text.Encoding.UTF8);
+        LoadProfileList();
+    }
+
+    // ── clipboard import / export ─────────────────────────────────────────────
+
+    private void ExportProfile_Click(object s, RoutedEventArgs e)
+    {
+        try
+        {
+            var json    = BuildProfileJson();
+            var encoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json));
+            Clipboard.SetText("CY1:" + encoded);
+
+            // brief visual feedback on the button
+            if (s is Button btn)
+            {
+                var prev = btn.Content;
+                btn.Content = "COPIED!";
+                var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1400) };
+                t.Tick += (_, _) => { t.Stop(); btn.Content = prev; };
+                t.Start();
+            }
+        }
+        catch { }
+    }
+
+    private void ImportProfile_Click(object s, RoutedEventArgs e)
+    {
+        try
+        {
+            var text = Clipboard.GetText()?.Trim() ?? "";
+            if (!text.StartsWith("CY1:")) return;
+
+            var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(text[4..]));
+
+            // validate it parses before asking for a name
+            using var test = JsonDocument.Parse(json);
+
+            var name = ProfileNameBox.Text.Trim();
+            if (string.IsNullOrEmpty(name)) name = "imported";
+
+            var invalid = Path.GetInvalidFileNameChars();
+            name = new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray());
+
+            Directory.CreateDirectory(ProfilesDir);
+            var path = Path.Combine(ProfilesDir, name + ".json");
+            File.WriteAllText(path, json, System.Text.Encoding.UTF8);
+
+            LoadProfile(path);
+            LoadProfileList();
+
+            if (s is Button btn)
+            {
+                var prev = btn.Content;
+                btn.Content = "IMPORTED!";
+                var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1400) };
+                t.Tick += (_, _) => { t.Stop(); btn.Content = prev; };
+                t.Start();
+            }
+        }
+        catch
+        {
+            if (s is Button btn)
+            {
+                var prev = btn.Content;
+                btn.Content = "INVALID";
+                var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1400) };
+                t.Tick += (_, _) => { t.Stop(); btn.Content = prev; };
+                t.Start();
+            }
+        }
+    }
+
+    // ── profile serialization ─────────────────────────────────────────────────
+
+    // builds the full json string for the current state, including keybinds and custom pixels
+    private string BuildProfileJson()
+    {
         var cfg = new
         {
-            cr_template     = _s.CrTemplate,
-            cr_color        = _s.CrColor,
-            cr_outline      = _s.CrOutline,
-            cr_outline_size = _s.CrOutlineSize,
-            cr_size         = _s.CrSize,
-            cr_opacity      = _s.CrOpacity,
-            cr_gap          = _s.CrGap
+            cr_template      = _s.CrTemplate,
+            cr_color         = _s.CrColor,
+            cr_outline       = _s.CrOutline,
+            cr_outline_size  = _s.CrOutlineSize,
+            cr_size          = _s.CrSize,
+            cr_opacity       = _s.CrOpacity,
+            cr_gap           = _s.CrGap,
+            cr_custom_pixels = _s.CrCustomPixels,
+            cr_builder_size  = _s.CrBuilderSize,
+            proof_key        = _s.ProofKey,
+            cycle_key        = _s.CycleKey
         };
-
-        File.WriteAllText(path, JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true }));
-        LoadProfileList();
+        return JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true });
     }
 
     private void TryLoadLastUsed()
@@ -894,7 +1030,7 @@ public partial class MainWindow : Window
             using var doc = JsonDocument.Parse(File.ReadAllText(SettingsFile));
             var r = doc.RootElement;
             if (r.TryGetProp("proof_key", out var v) && !string.IsNullOrEmpty(v)) _s.ProofKey = v;
-            if (r.TryGetProp("cycle_key", out v))                                 _s.CycleKey = v;
+            if (r.TryGetProp("cycle_key", out v))                                  _s.CycleKey = v;
         }
         catch { }
     }
@@ -916,6 +1052,39 @@ public partial class MainWindow : Window
             if (r.TryGetProperty("cr_opacity",      out jv) && jv.TryGetInt32(out i))     _s.CrOpacity     = i;
             if (r.TryGetProperty("cr_gap",          out jv) && jv.TryGetInt32(out i))     _s.CrGap         = i;
 
+            // load keybinds from profile (non-empty values only, so an old profile without them won't reset what's already set)
+            if (r.TryGetProp("proof_key", out v) && !string.IsNullOrEmpty(v))
+            {
+                _s.ProofKey = v;
+                if (ProofKeyBtn != null) ProofKeyBtn.Content = DisplayKey(v);
+            }
+            if (r.TryGetProp("cycle_key", out v))
+            {
+                _s.CycleKey = v;
+                if (CycleKeyBtn != null) CycleKeyBtn.Content = string.IsNullOrEmpty(v) ? "NONE" : DisplayKey(v);
+            }
+
+            // load custom pixel data if present
+            if (r.TryGetProperty("cr_custom_pixels", out jv) && jv.ValueKind == JsonValueKind.Array)
+            {
+                _s.CrCustomPixels.Clear();
+                foreach (var el in jv.EnumerateArray())
+                    if (el.GetString() is { } px) _s.CrCustomPixels.Add(px);
+            }
+            if (r.TryGetProperty("cr_builder_size", out jv) && jv.TryGetInt32(out i))
+            {
+                // only 15/30/60 are supported; snap anything else (e.g. an old 120) down
+                int gs = i <= 15 ? 15 : i <= 30 ? 30 : 60;
+                _s.CrBuilderSize = gs;
+                _builderSize = gs;
+                if (_builderGridControl != null)
+                {
+                    RebuildBuilderGrid(gs);
+                    LoadBuilderGridFromState();
+                    UpdateBuilderSizeButtons();
+                }
+            }
+
             if (writeLastUsed)
             {
                 Directory.CreateDirectory(ProfilesDir);
@@ -936,6 +1105,174 @@ public partial class MainWindow : Window
         var d = key.Replace("Key.", "").ToUpper();
         return d.Length > 8 ? d[..8] : d;
     }
+
+    // ── custom builder ────────────────────────────────────────────────────────
+
+    private void InitBuilderPanel()
+    {
+        RebuildBuilderGrid(_builderSize);
+
+        BuilderPalettePanel.Children.Clear();
+        foreach (var hex in BuilderPalette)
+            BuilderPalettePanel.Children.Add(BuildBuilderSwatch(hex));
+
+        LoadBuilderGridFromState();
+        UpdateBuilderSwatchSelection();
+        UpdateBuilderModeLabel();
+        UpdateBuilderSizeButtons();
+    }
+
+    private void RebuildBuilderGrid(int size)
+    {
+        // the overall grid field stays the same size for every grid size; only the
+        // number of cells changes, so the cells get smaller as the grid grows.
+        // a single custom-drawn control renders all cells/lines, so changing the
+        // grid size no longer spawns thousands of Border elements (no lag).
+        _builderSize = size;
+        _builderGrid = new string?[size, size];
+
+        if (_builderGridControl == null)
+        {
+            _builderGridControl = new BuilderGridControl();
+            _builderGridControl.CellPainted += PaintBuilderCell;
+            BuilderGridHost.Children.Add(_builderGridControl);
+        }
+
+        _builderGridControl.SetGrid(size, _builderGrid);
+    }
+
+    private UIElement BuildBuilderSwatch(string hex)
+    {
+        Color col;
+        try   { col = (Color)ColorConverter.ConvertFromString(hex); }
+        catch { col = Colors.White; }
+
+        var b = new Border
+        {
+            Width           = 20,
+            Height          = 20,
+            Margin          = new Thickness(0, 0, 4, 4),
+            BorderThickness = new Thickness(2),
+            BorderBrush     = new SolidColorBrush(Colors.Transparent),
+            Background      = new SolidColorBrush(col),
+            Cursor          = Cursors.Hand,
+            Tag             = hex
+        };
+
+        b.MouseLeftButtonDown += (_, _) =>
+        {
+            _builderColor   = hex;
+            _builderErasing = false;
+            UpdateBuilderSwatchSelection();
+            UpdateBuilderModeLabel();
+        };
+
+        return b;
+    }
+
+    private void UpdateBuilderSwatchSelection()
+    {
+        foreach (UIElement el in BuilderPalettePanel.Children)
+            if (el is Border b)
+                b.BorderBrush = (b.Tag as string) == _builderColor && !_builderErasing
+                    ? new SolidColorBrush(Color.FromRgb(0xf5, 0xf5, 0xf5))
+                    : new SolidColorBrush(Colors.Transparent);
+    }
+
+    private void UpdateBuilderModeLabel()
+    {
+        if (BuilderModeLabel == null) return;
+        BuilderModeLabel.Text = _builderErasing ? "mode: erase" : $"mode: draw  {_builderColor}";
+    }
+
+    private void PaintBuilderCell(int row, int col)
+    {
+        if (row < 0 || row >= _builderSize || col < 0 || col >= _builderSize) return;
+
+        var newVal = _builderErasing ? null : _builderColor;
+        if (_builderGrid[row, col] == newVal) return; // nothing changed, skip redraw/flush
+
+        _builderGrid[row, col] = newVal;
+        _builderGridControl?.Refresh();
+        FlushBuilderToState();
+    }
+
+    private void FlushBuilderToState()
+    {
+        _s.CrCustomPixels.Clear();
+        for (int r = 0; r < _builderSize; r++)
+            for (int c = 0; c < _builderSize; c++)
+                if (_builderGrid[r, c] is { } hex)
+                    _s.CrCustomPixels.Add($"{r},{c},{hex}");
+
+        _s.CrTemplate = "custom";
+        UpdateTemplateTileSelection();
+        RefreshCrosshairOverlay();
+    }
+
+    private void LoadBuilderGridFromState()
+    {
+        if (_builderGridControl == null) return;
+
+        Array.Clear(_builderGrid, 0, _builderGrid.Length);
+
+        foreach (var entry in _s.CrCustomPixels)
+        {
+            var parts = entry.Split(',');
+            if (parts.Length < 3) continue;
+            if (!int.TryParse(parts[0], out int row) || !int.TryParse(parts[1], out int col)) continue;
+            if (row < 0 || row >= _builderSize || col < 0 || col >= _builderSize) continue;
+            _builderGrid[row, col] = parts[2];
+        }
+
+        _builderGridControl.Refresh();
+    }
+
+    private void BuilderEraseToggle_Click(object s, RoutedEventArgs e)
+    {
+        _builderErasing = !_builderErasing;
+        if (s is Button btn)
+            btn.Content = _builderErasing ? "DRAW" : "ERASE";
+        UpdateBuilderSwatchSelection();
+        UpdateBuilderModeLabel();
+    }
+
+    private void BuilderClear_Click(object s, RoutedEventArgs e)
+    {
+        if (_builderGridControl == null) return;
+        Array.Clear(_builderGrid, 0, _builderGrid.Length);
+        _builderGridControl.Refresh();
+        FlushBuilderToState();
+    }
+
+    private void BuilderApply_Click(object s, RoutedEventArgs e)
+    {
+        FlushBuilderToState();
+    }
+
+    private void BuilderGridSize_Click(object s, RoutedEventArgs e)
+    {
+        if (s is not Button btn) return;
+        if (!int.TryParse(btn.Tag as string, out int newSize)) return;
+        if (newSize == _builderSize) return;
+        _s.CrBuilderSize = newSize;
+        RebuildBuilderGrid(newSize);
+        LoadBuilderGridFromState();
+        UpdateBuilderSizeButtons();
+    }
+
+    private void UpdateBuilderSizeButtons()
+    {
+        if (BuilderSizePanel == null) return;
+        foreach (UIElement el in BuilderSizePanel.Children)
+        {
+            if (el is not Button btn) continue;
+            if (!int.TryParse(btn.Tag as string, out int sz)) continue;
+            btn.Background = sz == _builderSize
+                ? new SolidColorBrush(Color.FromRgb(0x2a, 0x2a, 0x2a))
+                : new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x14));
+        }
+    }
 }
 
 internal static class JsonExt
@@ -946,5 +1283,127 @@ internal static class JsonExt
         { value = s; return true; }
         value = "";
         return false;
+    }
+}
+
+// single custom-drawn pixel grid for the builder. renders every cell and grid
+// line in one OnRender pass instead of using one Border per cell, so switching
+// to large grids (e.g. 60x60) stays smooth and the lines are always visible.
+internal sealed class BuilderGridControl : FrameworkElement
+{
+    private const double FieldSize = 330.0;
+
+    private static readonly Brush BgBrush  = Frozen(Color.FromRgb(0x0a, 0x0a, 0x0a));
+    private static readonly Pen   LinePen  = FrozenPen(Color.FromRgb(0x33, 0x33, 0x33), 1.0);
+
+    private readonly Dictionary<string, Brush> _brushCache = new();
+
+    private int        _size;
+    private string?[,]? _cells;
+    private bool       _drawing;
+
+    // raised with (row, col) when the user paints a cell
+    public event Action<int, int>? CellPainted;
+
+    public BuilderGridControl()
+    {
+        Width  = FieldSize;
+        Height = FieldSize;
+        Cursor = System.Windows.Input.Cursors.Hand;
+    }
+
+    public void SetGrid(int size, string?[,] cells)
+    {
+        _size  = size;
+        _cells = cells;
+        InvalidateVisual();
+    }
+
+    public void Refresh() => InvalidateVisual();
+
+    protected override void OnRender(DrawingContext dc)
+    {
+        dc.DrawRectangle(BgBrush, null, new Rect(0, 0, FieldSize, FieldSize));
+
+        if (_cells == null || _size <= 0) return;
+
+        double cell = FieldSize / _size;
+
+        for (int r = 0; r < _size; r++)
+            for (int c = 0; c < _size; c++)
+                if (_cells[r, c] is { } hex)
+                    dc.DrawRectangle(BrushFor(hex), null,
+                        new Rect(c * cell, r * cell, cell, cell));
+
+        // crisp grid lines via a guideline set snapped to device pixels
+        var gl = new GuidelineSet();
+        for (int i = 0; i <= _size; i++)
+        {
+            double p = Math.Round(i * cell) + 0.5;
+            gl.GuidelinesX.Add(p);
+            gl.GuidelinesY.Add(p);
+        }
+        gl.Freeze();
+        dc.PushGuidelineSet(gl);
+        for (int i = 0; i <= _size; i++)
+        {
+            double p = Math.Round(i * cell) + 0.5;
+            dc.DrawLine(LinePen, new Point(p, 0), new Point(p, FieldSize));
+            dc.DrawLine(LinePen, new Point(0, p), new Point(FieldSize, p));
+        }
+        dc.Pop();
+    }
+
+    protected override void OnMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs e)
+    {
+        _drawing = true;
+        CaptureMouse();
+        PaintAt(e.GetPosition(this));
+        e.Handled = true;
+    }
+
+    protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
+    {
+        if (_drawing) PaintAt(e.GetPosition(this));
+    }
+
+    protected override void OnMouseLeftButtonUp(System.Windows.Input.MouseButtonEventArgs e)
+    {
+        _drawing = false;
+        if (IsMouseCaptured) ReleaseMouseCapture();
+    }
+
+    private void PaintAt(Point p)
+    {
+        if (_size <= 0) return;
+        double cell = FieldSize / _size;
+        int c = (int)(p.X / cell);
+        int r = (int)(p.Y / cell);
+        if (r < 0 || r >= _size || c < 0 || c >= _size) return;
+        CellPainted?.Invoke(r, c);
+    }
+
+    private Brush BrushFor(string hex)
+    {
+        if (_brushCache.TryGetValue(hex, out var b)) return b;
+        Brush nb;
+        try   { nb = Frozen((Color)ColorConverter.ConvertFromString(hex)); }
+        catch { nb = Brushes.White; }
+        _brushCache[hex] = nb;
+        return nb;
+    }
+
+    private static Brush Frozen(Color c)
+    {
+        var b = new SolidColorBrush(c);
+        b.Freeze();
+        return b;
+    }
+
+    private static Pen FrozenPen(Color c, double thickness)
+    {
+        var p = new Pen(Frozen(c), thickness);
+        p.Freeze();
+        return p;
     }
 }

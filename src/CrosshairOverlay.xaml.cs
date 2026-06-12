@@ -12,7 +12,7 @@ public partial class CrosshairOverlay : Window
 {
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
-    private const uint WDA_NONE              = 0x00000000;
+    private const uint WDA_NONE               = 0x00000000;
     private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -64,6 +64,54 @@ public partial class CrosshairOverlay : Window
         double cy = Height / 2.0;
         OverlayCanvas.Opacity = opacity / 100.0;
         CrDraw.Draw(OverlayCanvas, cx, cy, size / 100.0, color, outline, outlineSize, template, gap);
+
+        if (!IsVisible) Show();
+    }
+
+    // renders a custom pixel-grid crosshair from the list of "row,col,#hex" entries
+    public void UpdateCustomCrosshair(List<string> pixels, int size, int opacity, int gridSize)
+    {
+        OverlayCanvas.Children.Clear();
+
+        if (pixels.Count == 0)
+        {
+            if (IsVisible) Hide();
+            return;
+        }
+
+        OverlayCanvas.Opacity = opacity / 100.0;
+
+        double cx        = Width  / 2.0;
+        double cy        = Height / 2.0;
+        // keep the overall crosshair the same on-screen size regardless of grid
+        // resolution: a finer grid just means smaller cells over the same area
+        double baseField = 60.0; // px the whole grid spans at 100% size
+        double cellSize  = baseField * (size / 100.0) / gridSize;
+        // center the grid on the screen center using its real dimensions
+        double gridOff   = (gridSize * cellSize) / 2.0;
+
+        foreach (var entry in pixels)
+        {
+            var parts = entry.Split(',');
+            if (parts.Length < 3) continue;
+            if (!int.TryParse(parts[0], out int row) || !int.TryParse(parts[1], out int col)) continue;
+
+            Color color;
+            try   { color = (Color)ColorConverter.ConvertFromString(parts[2]); }
+            catch { color = Colors.White; }
+
+            var rect = new Rectangle
+            {
+                Width      = cellSize,
+                Height     = cellSize,
+                Fill       = new SolidColorBrush(color),
+                SnapsToDevicePixels = true
+            };
+
+            Canvas.SetLeft(rect, cx - gridOff + col * cellSize);
+            Canvas.SetTop(rect,  cy - gridOff + row * cellSize);
+            OverlayCanvas.Children.Add(rect);
+        }
 
         if (!IsVisible) Show();
     }
