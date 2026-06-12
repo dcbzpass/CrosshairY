@@ -5,7 +5,6 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using System.Windows.Threading;
 
 namespace CrosshairY;
 
@@ -26,6 +25,16 @@ public partial class CrosshairOverlay : Window
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
         int X, int Y, int cx, int cy, uint uFlags);
 
+    private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd,
+        int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc,
+        WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+
     private const int GWL_EXSTYLE       = -20;
     private const int WS_EX_LAYERED     = 0x00080000;
     private const int WS_EX_TRANSPARENT = 0x00000020;
@@ -37,8 +46,13 @@ public partial class CrosshairOverlay : Window
     private const uint SWP_NOMOVE     = 0x0002;
     private const uint SWP_NOACTIVATE = 0x0010;
 
+    private const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
+    private const uint WINEVENT_OUTOFCONTEXT   = 0x0000;
+    private const uint WINEVENT_SKIPOWNPROCESS = 0x0002;
+
     private IntPtr _hwnd;
-    private DispatcherTimer? _topmostTimer;
+    private WinEventDelegate? _winEventProc;
+    private IntPtr _winEventHook;
 
     public CrosshairOverlay()
     {
@@ -59,15 +73,20 @@ public partial class CrosshairOverlay : Window
 
             ReassertTopmost();
 
-            _topmostTimer = new DispatcherTimer(DispatcherPriority.Background)
-            {
-                Interval = TimeSpan.FromMilliseconds(250)
-            };
-            _topmostTimer.Tick += (_, _) => ReassertTopmost();
-            _topmostTimer.Start();
+            // Re-assert topmost only when another app takes the foreground
+            // (e.g. switching to a fullscreen game). Polling SetWindowPos on a
+            // layered window every frame caused the crosshair to flicker, so we
+            // react to foreground changes instead. SKIPOWNPROCESS keeps our own
+            // windows (main UI, color picker) from triggering it.
+            _winEventProc = (_, _, _, _, _, _, _) => ReassertTopmost();
+            _winEventHook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND,
+                IntPtr.Zero, _winEventProc, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
         };
 
-        Closed += (_, _) => _topmostTimer?.Stop();
+        Closed += (_, _) =>
+        {
+            if (_winEventHook != IntPtr.Zero) UnhookWinEvent(_winEventHook);
+        };
     }
 
     private void ReassertTopmost()

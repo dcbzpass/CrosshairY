@@ -419,7 +419,6 @@ public partial class MainWindow : Window
         CrSizeLabel.Text            = $"{_s.CrSize}%";
         CrOpacityLabel.Text         = $"{_s.CrOpacity}%";
         CrGapLabel.Text             = _s.CrGap.ToString();
-        CrHexInput.Text             = _s.CrColor;
     }
 
     private UIElement BuildTemplateTile(string id, string name)
@@ -577,28 +576,176 @@ public partial class MainWindow : Window
         UpdateTemplateTileSelection();
         UpdateColorSwatchSelection();
         RebuildTemplatePreviews();
-        if (CrHexInput != null) CrHexInput.Text = _s.CrColor;
+        if (ColorPickerPopup?.IsOpen == true) SyncPickerFromColor();
         RefreshCrosshairOverlay();
     }
 
-    private void CrHexInput_Changed(object s, System.Windows.Controls.TextChangedEventArgs e)
+    // ── custom color picker (square HSV) ─────────────────────────────────────
+    private const double SvW = 200, SvH = 150, HueW = 200;
+    private double _pkH, _pkS, _pkV;   // current picker hue/saturation/value
+    private bool _pkUpdating;          // guards programmatic text/UI updates
+    private bool _svDrag, _hueDrag;
+
+    private void OpenColorPicker_Click(object s, RoutedEventArgs e)
     {
-        if (s is not System.Windows.Controls.TextBox tb) return;
+        SyncPickerFromColor();
+        ColorPickerPopup.IsOpen = true;
+    }
+
+    // read _s.CrColor into HSV state and refresh every part of the popup
+    private void SyncPickerFromColor()
+    {
+        Color col;
+        try   { col = (Color)ColorConverter.ConvertFromString(_s.CrColor); }
+        catch { col = Colors.White; }
+        RgbToHsv(col, out _pkH, out _pkS, out _pkV);
+        SyncPickerUi();
+    }
+
+    // push the current HSV state onto the thumbs, hue base and hex field
+    private void SyncPickerUi()
+    {
+        _pkUpdating = true;
+
+        SvHueRect.Fill = new SolidColorBrush(HsvToRgb(_pkH, 1, 1));
+        Canvas.SetLeft(SvThumb, _pkS * SvW - SvThumb.Width / 2);
+        Canvas.SetTop(SvThumb, (1 - _pkV) * SvH - SvThumb.Height / 2);
+        Canvas.SetLeft(HueThumb, _pkH / 360.0 * HueW - HueThumb.Width / 2);
+
+        var col = HsvToRgb(_pkH, _pkS, _pkV);
+        PickerPreview.Background = new SolidColorBrush(col);
+        PickerHexInput.Text = HexOf(col);
+        PickerHexInput.Foreground = new SolidColorBrush(Color.FromRgb(0xf5, 0xf5, 0xf5));
+
+        _pkUpdating = false;
+    }
+
+    // commit the current HSV state as the active crosshair color
+    private void ApplyPickerColor()
+    {
+        _s.CrColor = HexOf(HsvToRgb(_pkH, _pkS, _pkV));
+        SyncPickerUi();
+        UpdateColorSwatchSelection();
+        RebuildTemplatePreviews();
+        RefreshCrosshairOverlay();
+    }
+
+    private void SvSquare_MouseDown(object s, MouseButtonEventArgs e)
+    {
+        _svDrag = true;
+        SvSquare.CaptureMouse();
+        SetSvFromPoint(e.GetPosition(SvSquare));
+    }
+
+    private void SvSquare_MouseMove(object s, System.Windows.Input.MouseEventArgs e)
+    {
+        if (_svDrag) SetSvFromPoint(e.GetPosition(SvSquare));
+    }
+
+    private void SvSquare_MouseUp(object s, MouseButtonEventArgs e)
+    {
+        _svDrag = false;
+        SvSquare.ReleaseMouseCapture();
+    }
+
+    private void SetSvFromPoint(Point p)
+    {
+        _pkS = System.Math.Clamp(p.X / SvW, 0, 1);
+        _pkV = System.Math.Clamp(1 - p.Y / SvH, 0, 1);
+        ApplyPickerColor();
+    }
+
+    private void HueBar_MouseDown(object s, MouseButtonEventArgs e)
+    {
+        _hueDrag = true;
+        HueBar.CaptureMouse();
+        SetHueFromPoint(e.GetPosition(HueBar));
+    }
+
+    private void HueBar_MouseMove(object s, System.Windows.Input.MouseEventArgs e)
+    {
+        if (_hueDrag) SetHueFromPoint(e.GetPosition(HueBar));
+    }
+
+    private void HueBar_MouseUp(object s, MouseButtonEventArgs e)
+    {
+        _hueDrag = false;
+        HueBar.ReleaseMouseCapture();
+    }
+
+    private void SetHueFromPoint(Point p)
+    {
+        _pkH = System.Math.Clamp(p.X / HueW, 0, 1) * 360.0;
+        ApplyPickerColor();
+    }
+
+    private void PickerHexInput_Changed(object s, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (_pkUpdating || s is not System.Windows.Controls.TextBox tb) return;
         var raw = tb.Text.Trim();
         if (!raw.StartsWith('#')) raw = "#" + raw;
         try
         {
             var col = (Color)ColorConverter.ConvertFromString(raw);
-            _s.CrColor = raw;
+            RgbToHsv(col, out _pkH, out _pkS, out _pkV);
+            _s.CrColor = HexOf(col);
+
+            _pkUpdating = true;
+            SvHueRect.Fill = new SolidColorBrush(HsvToRgb(_pkH, 1, 1));
+            Canvas.SetLeft(SvThumb, _pkS * SvW - SvThumb.Width / 2);
+            Canvas.SetTop(SvThumb, (1 - _pkV) * SvH - SvThumb.Height / 2);
+            Canvas.SetLeft(HueThumb, _pkH / 360.0 * HueW - HueThumb.Width / 2);
+            PickerPreview.Background = new SolidColorBrush(col);
+            tb.Foreground = new SolidColorBrush(Color.FromRgb(0xf5, 0xf5, 0xf5));
+            _pkUpdating = false;
+
             UpdateColorSwatchSelection();
             RebuildTemplatePreviews();
             RefreshCrosshairOverlay();
-            tb.Foreground = new SolidColorBrush(Color.FromRgb(0xf5, 0xf5, 0xf5));
         }
         catch
         {
             tb.Foreground = new SolidColorBrush(Color.FromRgb(0x99, 0x33, 0x33));
         }
+    }
+
+    private static string HexOf(Color c) => $"#{c.R:x2}{c.G:x2}{c.B:x2}";
+
+    private static Color HsvToRgb(double h, double s, double v)
+    {
+        double c = v * s;
+        double x = c * (1 - System.Math.Abs((h / 60.0) % 2 - 1));
+        double m = v - c;
+        double r, g, b;
+        if      (h <  60) { r = c; g = x; b = 0; }
+        else if (h < 120) { r = x; g = c; b = 0; }
+        else if (h < 180) { r = 0; g = c; b = x; }
+        else if (h < 240) { r = 0; g = x; b = c; }
+        else if (h < 300) { r = x; g = 0; b = c; }
+        else              { r = c; g = 0; b = x; }
+        return Color.FromRgb(
+            (byte)System.Math.Round((r + m) * 255),
+            (byte)System.Math.Round((g + m) * 255),
+            (byte)System.Math.Round((b + m) * 255));
+    }
+
+    private static void RgbToHsv(Color col, out double h, out double s, out double v)
+    {
+        double r = col.R / 255.0, g = col.G / 255.0, b = col.B / 255.0;
+        double max = System.Math.Max(r, System.Math.Max(g, b));
+        double min = System.Math.Min(r, System.Math.Min(g, b));
+        double d = max - min;
+
+        h = 0;
+        if (d > 0)
+        {
+            if      (max == r) h = 60 * (((g - b) / d) % 6);
+            else if (max == g) h = 60 * (((b - r) / d) + 2);
+            else               h = 60 * (((r - g) / d) + 4);
+            if (h < 0) h += 360;
+        }
+        s = max <= 0 ? 0 : d / max;
+        v = max;
     }
 
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
