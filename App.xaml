@@ -102,8 +102,7 @@
             </Border>
             <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter TargetName="Bd" Property="Background"
-                            Value="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"/>
+                    <Setter TargetName="Bd" Property="Background" Value="#1e1e1e"/>
                 </Trigger>
                 <Trigger Property="IsPressed" Value="True">
                     <Setter TargetName="Bd" Property="Opacity" Value="0.65"/>
