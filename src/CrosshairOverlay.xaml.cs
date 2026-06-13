@@ -131,10 +131,15 @@ public partial class CrosshairOverlay : Window
 
         OverlayCanvas.Opacity = opacity / 100.0;
 
-        int ss  = smooth ? System.Math.Max(4, (int)System.Math.Ceiling(320.0 / gridSize)) : 1;
-        int dim = gridSize * ss;
-        int stride = dim * 4;
-        var buf = new byte[dim * dim * 4];
+        double cx    = Width  / 2.0;
+        double cy    = Height / 2.0;
+        double field = 60.0 * (size / 100.0);
+        double cell  = field / gridSize;
+        double ox    = cx - field / 2.0;
+        double oy    = cy - field / 2.0;
+        double bleed = smooth ? cell * 0.5 : 0.0;
+
+        var byColor = new Dictionary<string, GeometryGroup>();
 
         foreach (var entry in pixels)
         {
@@ -143,45 +148,33 @@ public partial class CrosshairOverlay : Window
             if (!int.TryParse(parts[0], out int row) || !int.TryParse(parts[1], out int col)) continue;
             if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) continue;
 
-            Color color;
-            try   { color = (Color)ColorConverter.ConvertFromString(parts[2]); }
-            catch { color = Colors.White; }
-
-            for (int by = 0; by < ss; by++)
+            var hex = parts[2];
+            if (!byColor.TryGetValue(hex, out var group))
             {
-                int y = row * ss + by;
-                for (int bx = 0; bx < ss; bx++)
-                {
-                    int idx = y * stride + (col * ss + bx) * 4;
-                    buf[idx + 0] = color.B;
-                    buf[idx + 1] = color.G;
-                    buf[idx + 2] = color.R;
-                    buf[idx + 3] = 255;
-                }
+                group = new GeometryGroup();
+                byColor[hex] = group;
             }
+
+            var rect = new Rect(ox + col * cell - bleed / 2.0, oy + row * cell - bleed / 2.0,
+                                cell + bleed, cell + bleed);
+            group.Children.Add(new RectangleGeometry(rect));
         }
 
-        var bmp = new WriteableBitmap(dim, dim, 96, 96, PixelFormats.Bgra32, null);
-        bmp.WritePixels(new Int32Rect(0, 0, dim, dim), buf, stride, 0);
-        bmp.Freeze();
-
-        double cx    = Width  / 2.0;
-        double cy    = Height / 2.0;
-        double field = 60.0 * (size / 100.0);
-
-        var img = new System.Windows.Controls.Image
+        foreach (var (hex, group) in byColor)
         {
-            Source  = bmp,
-            Width   = field,
-            Height  = field,
-            Stretch = Stretch.Fill
-        };
-        RenderOptions.SetBitmapScalingMode(img, smooth ? BitmapScalingMode.Fant : BitmapScalingMode.NearestNeighbor);
-        RenderOptions.SetEdgeMode(img, smooth ? EdgeMode.Unspecified : EdgeMode.Aliased);
+            Color color;
+            try   { color = (Color)ColorConverter.ConvertFromString(hex); }
+            catch { color = Colors.White; }
 
-        Canvas.SetLeft(img, cx - field / 2.0);
-        Canvas.SetTop(img,  cy - field / 2.0);
-        OverlayCanvas.Children.Add(img);
+            group.Freeze();
+            var path = new Path { Data = group, Fill = new SolidColorBrush(color) };
+            if (!smooth)
+            {
+                path.SnapsToDevicePixels = true;
+                RenderOptions.SetEdgeMode(path, EdgeMode.Aliased);
+            }
+            OverlayCanvas.Children.Add(path);
+        }
 
         if (!IsVisible) Show();
     }
