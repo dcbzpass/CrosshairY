@@ -15,8 +15,8 @@ public partial class SurveyWindow : Window
     private const int WM_NCLBUTTONDOWN = 0xA1;
     private const int HT_CAPTION       = 0x2;
 
-    private const string SurveyEndpoint = "https://YOUR_PROJECT_REF.supabase.co/functions/v1/survey";
-    private const string SupabaseAnonKey = "YOUR_SUPABASE_ANON_KEY";
+    private const string SurveyEndpoint = "https://efmdnajrclqdzkmwkruj.supabase.co/functions/v1/survey";
+    private const string SupabaseAnonKey = "sb_publishable_VJrb6qUyFZ_BEEaUA4W4SA_EhWvscyG";
 
     private static readonly HttpClient Http = new();
 

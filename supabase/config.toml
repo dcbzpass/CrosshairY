@@ -1,4 +1,4 @@
-project_id = "crosshairy"
+project_id = "efmdnajrclqdzkmwkruj"
 
 [functions.survey]
-verify_jwt = true
+verify_jwt = false
