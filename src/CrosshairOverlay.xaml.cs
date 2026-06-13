@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
 namespace CrosshairY;
@@ -135,7 +134,7 @@ public partial class CrosshairOverlay : Window
         if (!IsVisible) Show();
     }
 
-    public void UpdateCustomCrosshair(List<string> pixels, int size, int opacity, int gridSize, bool smooth)
+    public void UpdateCustomCrosshair(List<string> pixels, int size, int opacity, int gridSize)
     {
         OverlayCanvas.Children.Clear();
 
@@ -153,7 +152,6 @@ public partial class CrosshairOverlay : Window
         double cell  = field / gridSize;
         double ox    = cx - field / 2.0;
         double oy    = cy - field / 2.0;
-        double bleed = smooth ? cell * 0.5 : 0.0;
 
         var byColor = new Dictionary<string, GeometryGroup>();
 
@@ -171,9 +169,7 @@ public partial class CrosshairOverlay : Window
                 byColor[hex] = group;
             }
 
-            var rect = new Rect(ox + col * cell - bleed / 2.0, oy + row * cell - bleed / 2.0,
-                                cell + bleed, cell + bleed);
-            group.Children.Add(new RectangleGeometry(rect));
+            group.Children.Add(new RectangleGeometry(new Rect(ox + col * cell, oy + row * cell, cell, cell)));
         }
 
         foreach (var (hex, group) in byColor)
@@ -183,12 +179,8 @@ public partial class CrosshairOverlay : Window
             catch { color = Colors.White; }
 
             group.Freeze();
-            var path = new Path { Data = group, Fill = new SolidColorBrush(color) };
-            if (!smooth)
-            {
-                path.SnapsToDevicePixels = true;
-                RenderOptions.SetEdgeMode(path, EdgeMode.Aliased);
-            }
+            var path = new Path { Data = group, Fill = new SolidColorBrush(color), SnapsToDevicePixels = true };
+            RenderOptions.SetEdgeMode(path, EdgeMode.Aliased);
             OverlayCanvas.Children.Add(path);
         }
 

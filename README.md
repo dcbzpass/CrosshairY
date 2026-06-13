@@ -27,7 +27,6 @@ CrosshairY draws a persistent crosshair directly on your screen as a transparent
 - **Crosshair builder** - draw your own crosshair on a 15x15, 30x30 or 60x60 grid with a 16-color palette and a full tool set: **pencil, eraser, fill (bucket), line, rectangle and ellipse**
   - **Undo / redo** with Ctrl+Z / Ctrl+Y
   - **Mirror symmetry** - left/right, up/down or 4-way mirroring while you draw
-  - **Antialiasing toggle** - smooth, crisp scaling of your drawing on the overlay (or keep hard pixels)
   - **Save as crosshair** - pin your drawing into the "My Crosshairs" grid for one-click reuse
 - **Randomize button** - picks a random template and color instantly
 - **Outline toggle** with adjustable thickness (1-5)

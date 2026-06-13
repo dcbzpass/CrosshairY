@@ -1,15 +1,15 @@
-## Builder Update
+## Studio Update
 
 Download `CrosshairY.exe` below and run it. No installer needed. Requires the [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) if not already installed.
 
-### What's new in v1.0.4
+### What's new in v1.0.5
 
-- **Builder** - design your own crosshair pixel by pixel on a 15×15, 30×30 or 60×60 grid, with a color palette plus erase and clear tools
-- **Custom color picker** - a new color box that opens a square color field with a hue bar and a hex input, so you can dial in any exact color instead of only the preset swatches
-- **Clipboard Share** - export your current config as a code straight to your clipboard, and import a friend's the same way
-- **System tray** - CrosshairY now hides to the system tray instead of closing; double-click the tray icon to reopen, or right-click for Open / Exit
-- **New tray icon** - a fresh icon to match the app
-- **Always on top of fullscreen games** - the overlay now stays visible over borderless and fullscreen-optimized games like Fortnite
-- **Fixed unclickable button edges** - buttons (Support links, Builder sizes) are now clickable across their whole surface instead of only on the text, and no longer flicker the cursor
-- **Fixed crosshair color flicker** - the crosshair no longer blinks between white and your chosen color while a custom color is active
+- **Builder tools** - the crosshair builder now has a full tool set: pencil, eraser, fill (bucket), line, rectangle and ellipse, with a live preview as you drag out shapes
+- **Undo / redo** - step back and forward through your edits with the buttons or Ctrl+Z / Ctrl+Y
+- **Mirror symmetry** - draw with left/right, up/down or 4-way mirroring so symmetric crosshairs come together in seconds
+- **Save as crosshair** - pin a drawing from the builder into the new "My Crosshairs" grid and switch to it in one click, no rebuilding
+- **Sharper drawn crosshairs** - custom crosshairs now render as clean, crisp vectors on the overlay instead of looking blocky
+- **5 new templates** - Dot Ring, 2 Rings, Plus·, Corners and X Thick, bringing the built-in count to 22
+- **Multi-monitor** - choose which display the crosshair appears on under Settings
+- **More private survey backend** - survey responses now route through a server instead of shipping any webhook inside the app
 - **Various bug fixes and polish**

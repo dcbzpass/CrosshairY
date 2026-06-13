@@ -795,7 +795,7 @@ public partial class MainWindow : Window
     private void RefreshCrosshairOverlay()
     {
         if (_s.CrTemplate == "custom")
-            _crOverlay?.UpdateCustomCrosshair(_s.CrCustomPixels, _s.CrSize, _s.CrOpacity, _s.CrBuilderSize, _s.CrCustomSmooth);
+            _crOverlay?.UpdateCustomCrosshair(_s.CrCustomPixels, _s.CrSize, _s.CrOpacity, _s.CrBuilderSize);
         else
             _crOverlay?.UpdateCrosshair(_s.CrTemplate, _s.CrColor, _s.CrOutline, _s.CrOutlineSize, _s.CrSize, _s.CrOpacity, _s.CrGap);
     }
@@ -1399,7 +1399,6 @@ public partial class MainWindow : Window
             cr_gap           = _s.CrGap,
             cr_custom_pixels = _s.CrCustomPixels,
             cr_builder_size  = _s.CrBuilderSize,
-            cr_custom_smooth = _s.CrCustomSmooth,
             proof_key        = _s.ProofKey,
             cycle_key        = _s.CycleKey
         };
@@ -1488,9 +1487,6 @@ public partial class MainWindow : Window
                     UpdateBuilderSizeButtons();
                 }
             }
-            if (r.TryGetProperty("cr_custom_smooth", out jv) && jv.ValueKind == JsonValueKind.True)  _s.CrCustomSmooth = true;
-            if (r.TryGetProperty("cr_custom_smooth", out jv) && jv.ValueKind == JsonValueKind.False) _s.CrCustomSmooth = false;
-            if (BuilderSmoothToggle != null) BuilderSmoothToggle.IsChecked = _s.CrCustomSmooth;
 
             if (writeLastUsed)
             {
@@ -1521,8 +1517,6 @@ public partial class MainWindow : Window
         BuilderPalettePanel.Children.Clear();
         foreach (var hex in BuilderPalette)
             BuilderPalettePanel.Children.Add(BuildBuilderSwatch(hex));
-
-        BuilderSmoothToggle.IsChecked = _s.CrCustomSmooth;
 
         LoadBuilderGridFromState();
         UpdateBuilderSwatchSelection();
@@ -1869,12 +1863,6 @@ public partial class MainWindow : Window
                 ? new SolidColorBrush(Color.FromRgb(0x2a, 0x2a, 0x2a))
                 : new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x14));
         }
-    }
-
-    private void BuilderSmoothToggle_Changed(object s, RoutedEventArgs e)
-    {
-        _s.CrCustomSmooth = BuilderSmoothToggle.IsChecked == true;
-        RefreshCrosshairOverlay();
     }
 
     private void BuilderClear_Click(object s, RoutedEventArgs e)

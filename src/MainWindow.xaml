@@ -562,29 +562,7 @@
                                                         Click="BuilderGridSize_Click"/>
                                             </StackPanel>
 
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                    <TextBlock Text="SMOOTH (ANTIALIAS)"
-                                                               FontFamily="{StaticResource IBMPlexMono}"
-                                                               FontSize="9" Foreground="#8a8a8a"/>
-                                                    <TextBlock Text="blends pixels so the crosshair looks clean when scaled"
-                                                               FontFamily="{StaticResource IBMPlexMono}"
-                                                               FontSize="8" Foreground="#5a5a5a"
-                                                               Margin="0,2,0,0"/>
-                                                </StackPanel>
-                                                <ToggleButton x:Name="BuilderSmoothToggle"
-                                                              Grid.Column="1"
-                                                              Style="{StaticResource ToggleSwitch}"
-                                                              IsChecked="True"
-                                                              Checked="BuilderSmoothToggle_Changed"
-                                                              Unchecked="BuilderSmoothToggle_Changed"/>
-                                            </Grid>
-
-                                            <Grid Margin="0,14,0,0">
+                                            <Grid Margin="0,0,0,0">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="6"/>

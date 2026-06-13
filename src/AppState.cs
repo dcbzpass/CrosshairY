@@ -19,5 +19,4 @@ public class AppState
 
     public List<string> CrCustomPixels { get; set; } = new();
     public int CrBuilderSize { get; set; } = 15;
-    public bool CrCustomSmooth { get; set; } = true;
 }
