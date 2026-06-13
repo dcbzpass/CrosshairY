@@ -1,2 +1,0 @@
-Never add any comments to any file in a code file!
-Commit every update with a small title to github.
