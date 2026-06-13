@@ -324,7 +324,7 @@ public partial class MainWindow : Window
         (
             "survey_3",
             "How did you find us?",
-            new[] { "TikTok", "GitHub", "Discord", "Friend", "Other" }
+            new[] { "TikTok", "GitHub", "Discord", "Friend", "Website", "Other" }
         ),
         (
             "survey_7",
@@ -334,7 +334,7 @@ public partial class MainWindow : Window
         (
             "survey_15",
             "What would you like to see added next?",
-            new[] { "More crosshair templates", "Second monitor support", "Multiple profiles active at once", "Animated / reactive crosshair", "Other" }
+            new[] { "More crosshair templates", "Import of Images", "Multiple profiles active at once", "Animated / reactive crosshair", "Other" }
         ),
         (
             "survey_30",
