@@ -30,10 +30,15 @@ public partial class MainWindow : Window
     private CrosshairOverlay? _crOverlay;
 
     private string   _builderColor    = "#ffffff";
-    private bool     _builderErasing  = false;
     private int      _builderSize     = 15;
     private string?[,] _builderGrid  = new string?[15, 15];
     private BuilderGridControl? _builderGridControl;
+
+    private enum BuilderTool { Pencil, Eraser, Fill, Line, Rect, Ellipse }
+    private BuilderTool _builderTool = BuilderTool.Pencil;
+    private bool _strokeActive;
+    private int  _strokeStartR, _strokeStartC;
+    private string?[,]? _builderPreview;
 
     private static readonly string AppDir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrosshairY");
@@ -525,7 +530,7 @@ public partial class MainWindow : Window
     private void RefreshCrosshairOverlay()
     {
         if (_s.CrTemplate == "custom")
-            _crOverlay?.UpdateCustomCrosshair(_s.CrCustomPixels, _s.CrSize, _s.CrOpacity, _s.CrBuilderSize);
+            _crOverlay?.UpdateCustomCrosshair(_s.CrCustomPixels, _s.CrSize, _s.CrOpacity, _s.CrBuilderSize, _s.CrCustomSmooth);
         else
             _crOverlay?.UpdateCrosshair(_s.CrTemplate, _s.CrColor, _s.CrOutline, _s.CrOutlineSize, _s.CrSize, _s.CrOpacity, _s.CrGap);
     }
@@ -1129,6 +1134,7 @@ public partial class MainWindow : Window
             cr_gap           = _s.CrGap,
             cr_custom_pixels = _s.CrCustomPixels,
             cr_builder_size  = _s.CrBuilderSize,
+            cr_custom_smooth = _s.CrCustomSmooth,
             proof_key        = _s.ProofKey,
             cycle_key        = _s.CycleKey
         };
@@ -1216,6 +1222,9 @@ public partial class MainWindow : Window
                     UpdateBuilderSizeButtons();
                 }
             }
+            if (r.TryGetProperty("cr_custom_smooth", out jv) && jv.ValueKind == JsonValueKind.True)  _s.CrCustomSmooth = true;
+            if (r.TryGetProperty("cr_custom_smooth", out jv) && jv.ValueKind == JsonValueKind.False) _s.CrCustomSmooth = false;
+            if (BuilderSmoothToggle != null) BuilderSmoothToggle.IsChecked = _s.CrCustomSmooth;
 
             if (writeLastUsed)
             {
@@ -1247,25 +1256,32 @@ public partial class MainWindow : Window
         foreach (var hex in BuilderPalette)
             BuilderPalettePanel.Children.Add(BuildBuilderSwatch(hex));
 
+        BuilderSmoothToggle.IsChecked = _s.CrCustomSmooth;
+
         LoadBuilderGridFromState();
         UpdateBuilderSwatchSelection();
         UpdateBuilderModeLabel();
         UpdateBuilderSizeButtons();
+        UpdateBuilderToolButtons();
     }
 
     private void RebuildBuilderGrid(int size)
     {
         _builderSize = size;
         _builderGrid = new string?[size, size];
+        _builderPreview = null;
 
         if (_builderGridControl == null)
         {
             _builderGridControl = new BuilderGridControl();
-            _builderGridControl.CellPainted += PaintBuilderCell;
+            _builderGridControl.StrokeStart += OnBuilderStrokeStart;
+            _builderGridControl.StrokeMove  += OnBuilderStrokeMove;
+            _builderGridControl.StrokeEnd   += OnBuilderStrokeEnd;
             BuilderGridHost.Children.Add(_builderGridControl);
         }
 
         _builderGridControl.SetGrid(size, _builderGrid);
+        _builderGridControl.SetPreview(null);
     }
 
     private UIElement BuildBuilderSwatch(string hex)
@@ -1288,10 +1304,11 @@ public partial class MainWindow : Window
 
         b.MouseLeftButtonDown += (_, _) =>
         {
-            _builderColor   = hex;
-            _builderErasing = false;
+            _builderColor = hex;
+            if (_builderTool == BuilderTool.Eraser) _builderTool = BuilderTool.Pencil;
             UpdateBuilderSwatchSelection();
             UpdateBuilderModeLabel();
+            UpdateBuilderToolButtons();
         };
 
         return b;
@@ -1301,7 +1318,7 @@ public partial class MainWindow : Window
     {
         foreach (UIElement el in BuilderPalettePanel.Children)
             if (el is Border b)
-                b.BorderBrush = (b.Tag as string) == _builderColor && !_builderErasing
+                b.BorderBrush = (b.Tag as string) == _builderColor
                     ? new SolidColorBrush(Color.FromRgb(0xf5, 0xf5, 0xf5))
                     : new SolidColorBrush(Colors.Transparent);
     }
@@ -1309,19 +1326,142 @@ public partial class MainWindow : Window
     private void UpdateBuilderModeLabel()
     {
         if (BuilderModeLabel == null) return;
-        BuilderModeLabel.Text = _builderErasing ? "mode: erase" : $"mode: draw  {_builderColor}";
+        BuilderModeLabel.Text = _builderTool == BuilderTool.Eraser
+            ? "tool: eraser"
+            : $"tool: {_builderTool.ToString().ToLower()}  {_builderColor}";
     }
 
-    private void PaintBuilderCell(int row, int col)
+    private void SetBuilderCell(int row, int col, string? value)
     {
         if (row < 0 || row >= _builderSize || col < 0 || col >= _builderSize) return;
+        if (_builderGrid[row, col] == value) return;
+        _builderGrid[row, col] = value;
+    }
 
-        var newVal = _builderErasing ? null : _builderColor;
-        if (_builderGrid[row, col] == newVal) return;
+    private void OnBuilderStrokeStart(int row, int col)
+    {
+        _strokeActive = true;
+        _strokeStartR = row;
+        _strokeStartC = col;
 
-        _builderGrid[row, col] = newVal;
+        switch (_builderTool)
+        {
+            case BuilderTool.Pencil:  SetBuilderCell(row, col, _builderColor); CommitGridChange(); break;
+            case BuilderTool.Eraser:  SetBuilderCell(row, col, null);          CommitGridChange(); break;
+            case BuilderTool.Fill:    FloodFill(row, col);                     CommitGridChange(); break;
+            default:                  ShowShapePreview(row, col);              break;
+        }
+    }
+
+    private void OnBuilderStrokeMove(int row, int col)
+    {
+        if (!_strokeActive) return;
+
+        switch (_builderTool)
+        {
+            case BuilderTool.Pencil:  SetBuilderCell(row, col, _builderColor); CommitGridChange(); break;
+            case BuilderTool.Eraser:  SetBuilderCell(row, col, null);          CommitGridChange(); break;
+            case BuilderTool.Fill:    break;
+            default:                  ShowShapePreview(row, col);              break;
+        }
+    }
+
+    private void OnBuilderStrokeEnd(int row, int col)
+    {
+        if (!_strokeActive) return;
+        _strokeActive = false;
+
+        if (_builderTool is BuilderTool.Line or BuilderTool.Rect or BuilderTool.Ellipse)
+        {
+            foreach (var (r, c) in ShapeCells(_strokeStartR, _strokeStartC, row, col, _builderTool))
+                SetBuilderCell(r, c, _builderColor);
+            _builderPreview = null;
+            _builderGridControl?.SetPreview(null);
+            CommitGridChange();
+        }
+    }
+
+    private void CommitGridChange()
+    {
         _builderGridControl?.Refresh();
         FlushBuilderToState();
+    }
+
+    private void ShowShapePreview(int row, int col)
+    {
+        _builderPreview = new string?[_builderSize, _builderSize];
+        foreach (var (r, c) in ShapeCells(_strokeStartR, _strokeStartC, row, col, _builderTool))
+            if (r >= 0 && r < _builderSize && c >= 0 && c < _builderSize)
+                _builderPreview[r, c] = _builderColor;
+        _builderGridControl?.SetPreview(_builderPreview);
+    }
+
+    private void FloodFill(int row, int col)
+    {
+        if (row < 0 || row >= _builderSize || col < 0 || col >= _builderSize) return;
+        var target = _builderGrid[row, col];
+        if (target == _builderColor) return;
+
+        var stack = new Stack<(int r, int c)>();
+        stack.Push((row, col));
+        while (stack.Count > 0)
+        {
+            var (r, c) = stack.Pop();
+            if (r < 0 || r >= _builderSize || c < 0 || c >= _builderSize) continue;
+            if (_builderGrid[r, c] != target) continue;
+            _builderGrid[r, c] = _builderColor;
+            stack.Push((r + 1, c));
+            stack.Push((r - 1, c));
+            stack.Push((r, c + 1));
+            stack.Push((r, c - 1));
+        }
+    }
+
+    private static IEnumerable<(int r, int c)> ShapeCells(int r0, int c0, int r1, int c1, BuilderTool tool) =>
+        tool switch
+        {
+            BuilderTool.Line    => LineCells(r0, c0, r1, c1),
+            BuilderTool.Rect    => RectCells(r0, c0, r1, c1),
+            BuilderTool.Ellipse => EllipseCells(r0, c0, r1, c1),
+            _                   => System.Array.Empty<(int, int)>()
+        };
+
+    private static IEnumerable<(int r, int c)> LineCells(int r0, int c0, int r1, int c1)
+    {
+        int dr = System.Math.Abs(r1 - r0), dc = System.Math.Abs(c1 - c0);
+        int sr = r0 < r1 ? 1 : -1, sc = c0 < c1 ? 1 : -1;
+        int err = dc - dr;
+        while (true)
+        {
+            yield return (r0, c0);
+            if (r0 == r1 && c0 == c1) break;
+            int e2 = err * 2;
+            if (e2 > -dr) { err -= dr; c0 += sc; }
+            if (e2 <  dc) { err += dc; r0 += sr; }
+        }
+    }
+
+    private static IEnumerable<(int r, int c)> RectCells(int r0, int c0, int r1, int c1)
+    {
+        int rt = System.Math.Min(r0, r1), rb = System.Math.Max(r0, r1);
+        int cl = System.Math.Min(c0, c1), cr = System.Math.Max(c0, c1);
+        for (int c = cl; c <= cr; c++) { yield return (rt, c); yield return (rb, c); }
+        for (int r = rt; r <= rb; r++) { yield return (r, cl); yield return (r, cr); }
+    }
+
+    private static IEnumerable<(int r, int c)> EllipseCells(int r0, int c0, int r1, int c1)
+    {
+        int rt = System.Math.Min(r0, r1), rb = System.Math.Max(r0, r1);
+        int cl = System.Math.Min(c0, c1), cr = System.Math.Max(c0, c1);
+        double rcen = (rt + rb) / 2.0, ccen = (cl + cr) / 2.0;
+        double ra = System.Math.Max(0.5, (rb - rt) / 2.0), rb2 = System.Math.Max(0.5, (cr - cl) / 2.0);
+        for (int deg = 0; deg < 360; deg++)
+        {
+            double rad = deg * System.Math.PI / 180.0;
+            int r = (int)System.Math.Round(rcen + ra  * System.Math.Sin(rad));
+            int c = (int)System.Math.Round(ccen + rb2 * System.Math.Cos(rad));
+            yield return (r, c);
+        }
     }
 
     private void FlushBuilderToState()
@@ -1355,19 +1495,40 @@ public partial class MainWindow : Window
         _builderGridControl.Refresh();
     }
 
-    private void BuilderEraseToggle_Click(object s, RoutedEventArgs e)
+    private void BuilderTool_Click(object s, RoutedEventArgs e)
     {
-        _builderErasing = !_builderErasing;
-        if (s is Button btn)
-            btn.Content = _builderErasing ? "DRAW" : "ERASE";
-        UpdateBuilderSwatchSelection();
+        if (s is not Button btn || btn.Tag is not string tag) return;
+        if (!System.Enum.TryParse<BuilderTool>(tag, true, out var tool)) return;
+        _builderTool = tool;
         UpdateBuilderModeLabel();
+        UpdateBuilderToolButtons();
+    }
+
+    private void UpdateBuilderToolButtons()
+    {
+        if (BuilderToolPanel == null) return;
+        foreach (UIElement el in BuilderToolPanel.Children)
+        {
+            if (el is not Button btn || btn.Tag is not string tag) continue;
+            bool selected = System.Enum.TryParse<BuilderTool>(tag, true, out var tool) && tool == _builderTool;
+            btn.Background = selected
+                ? new SolidColorBrush(Color.FromRgb(0x2a, 0x2a, 0x2a))
+                : new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x14));
+        }
+    }
+
+    private void BuilderSmoothToggle_Changed(object s, RoutedEventArgs e)
+    {
+        _s.CrCustomSmooth = BuilderSmoothToggle.IsChecked == true;
+        RefreshCrosshairOverlay();
     }
 
     private void BuilderClear_Click(object s, RoutedEventArgs e)
     {
         if (_builderGridControl == null) return;
         Array.Clear(_builderGrid, 0, _builderGrid.Length);
+        _builderPreview = null;
+        _builderGridControl.SetPreview(null);
         _builderGridControl.Refresh();
         FlushBuilderToState();
     }
@@ -1424,9 +1585,13 @@ internal sealed class BuilderGridControl : FrameworkElement
 
     private int        _size;
     private string?[,]? _cells;
+    private string?[,]? _preview;
     private bool       _drawing;
+    private int        _lastR = -1, _lastC = -1;
 
-    public event Action<int, int>? CellPainted;
+    public event Action<int, int>? StrokeStart;
+    public event Action<int, int>? StrokeMove;
+    public event Action<int, int>? StrokeEnd;
 
     public BuilderGridControl()
     {
@@ -1439,6 +1604,12 @@ internal sealed class BuilderGridControl : FrameworkElement
     {
         _size  = size;
         _cells = cells;
+        InvalidateVisual();
+    }
+
+    public void SetPreview(string?[,]? preview)
+    {
+        _preview = preview;
         InvalidateVisual();
     }
 
@@ -1457,6 +1628,13 @@ internal sealed class BuilderGridControl : FrameworkElement
                 if (_cells[r, c] is { } hex)
                     dc.DrawRectangle(BrushFor(hex), null,
                         new Rect(c * cell, r * cell, cell, cell));
+
+        if (_preview != null)
+            for (int r = 0; r < _size; r++)
+                for (int c = 0; c < _size; c++)
+                    if (_preview[r, c] is { } phex)
+                        dc.DrawRectangle(PreviewBrushFor(phex), null,
+                            new Rect(c * cell, r * cell, cell, cell));
 
         var gl = new GuidelineSet();
         for (int i = 0; i <= _size; i++)
@@ -1478,31 +1656,40 @@ internal sealed class BuilderGridControl : FrameworkElement
 
     protected override void OnMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs e)
     {
+        if (!CellAt(e.GetPosition(this), out int r, out int c)) return;
         _drawing = true;
+        _lastR = r; _lastC = c;
         CaptureMouse();
-        PaintAt(e.GetPosition(this));
+        StrokeStart?.Invoke(r, c);
         e.Handled = true;
     }
 
     protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
     {
-        if (_drawing) PaintAt(e.GetPosition(this));
+        if (!_drawing) return;
+        if (!CellAt(e.GetPosition(this), out int r, out int c)) return;
+        if (r == _lastR && c == _lastC) return;
+        _lastR = r; _lastC = c;
+        StrokeMove?.Invoke(r, c);
     }
 
     protected override void OnMouseLeftButtonUp(System.Windows.Input.MouseButtonEventArgs e)
     {
+        if (!_drawing) return;
         _drawing = false;
         if (IsMouseCaptured) ReleaseMouseCapture();
+        if (CellAt(e.GetPosition(this), out int r, out int c)) StrokeEnd?.Invoke(r, c);
+        else StrokeEnd?.Invoke(_lastR, _lastC);
     }
 
-    private void PaintAt(Point p)
+    private bool CellAt(Point p, out int r, out int c)
     {
-        if (_size <= 0) return;
+        r = c = -1;
+        if (_size <= 0) return false;
         double cell = FieldSize / _size;
-        int c = (int)(p.X / cell);
-        int r = (int)(p.Y / cell);
-        if (r < 0 || r >= _size || c < 0 || c >= _size) return;
-        CellPainted?.Invoke(r, c);
+        c = System.Math.Clamp((int)(p.X / cell), 0, _size - 1);
+        r = System.Math.Clamp((int)(p.Y / cell), 0, _size - 1);
+        return true;
     }
 
     private Brush BrushFor(string hex)
@@ -1512,6 +1699,21 @@ internal sealed class BuilderGridControl : FrameworkElement
         try   { nb = Frozen((Color)ColorConverter.ConvertFromString(hex)); }
         catch { nb = Brushes.White; }
         _brushCache[hex] = nb;
+        return nb;
+    }
+
+    private Brush PreviewBrushFor(string hex)
+    {
+        var key = "p:" + hex;
+        if (_brushCache.TryGetValue(key, out var b)) return b;
+        Brush nb;
+        try
+        {
+            var col = (Color)ColorConverter.ConvertFromString(hex);
+            nb = Frozen(Color.FromArgb(0x88, col.R, col.G, col.B));
+        }
+        catch { nb = Frozen(Color.FromArgb(0x88, 0xff, 0xff, 0xff)); }
+        _brushCache[key] = nb;
         return nb;
     }
 

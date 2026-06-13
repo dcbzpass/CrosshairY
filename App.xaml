@@ -196,6 +196,37 @@
             <Setter Property="Template"              Value="{StaticResource FlatBtnTemplate}"/>
         </Style>
 
+        <Style x:Key="BuilderToolBtn" TargetType="Button">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Background"            Value="#141414"/>
+            <Setter Property="Width"                 Value="38"/>
+            <Setter Property="Height"                Value="38"/>
+            <Setter Property="Margin"                Value="0,0,0,6"/>
+            <Setter Property="Cursor"                Value="Hand"/>
+            <Setter Property="Tag"                   Value="#1e1e1e"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="#1e1e1e"
+                                BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background"
+                                        Value="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="SideNavBtn" TargetType="Button">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="Background"            Value="Transparent"/>

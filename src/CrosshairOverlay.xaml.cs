@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
 namespace CrosshairY;
@@ -118,11 +119,11 @@ public partial class CrosshairOverlay : Window
         if (!IsVisible) Show();
     }
 
-    public void UpdateCustomCrosshair(List<string> pixels, int size, int opacity, int gridSize)
+    public void UpdateCustomCrosshair(List<string> pixels, int size, int opacity, int gridSize, bool smooth)
     {
         OverlayCanvas.Children.Clear();
 
-        if (pixels.Count == 0)
+        if (pixels.Count == 0 || gridSize <= 0)
         {
             if (IsVisible) Hide();
             return;
@@ -130,34 +131,46 @@ public partial class CrosshairOverlay : Window
 
         OverlayCanvas.Opacity = opacity / 100.0;
 
-        double cx        = Width  / 2.0;
-        double cy        = Height / 2.0;
-        double baseField = 60.0;
-        double cellSize  = baseField * (size / 100.0) / gridSize;
-        double gridOff   = (gridSize * cellSize) / 2.0;
-
+        var buf = new byte[gridSize * gridSize * 4];
         foreach (var entry in pixels)
         {
             var parts = entry.Split(',');
             if (parts.Length < 3) continue;
             if (!int.TryParse(parts[0], out int row) || !int.TryParse(parts[1], out int col)) continue;
+            if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) continue;
 
             Color color;
             try   { color = (Color)ColorConverter.ConvertFromString(parts[2]); }
             catch { color = Colors.White; }
 
-            var rect = new Rectangle
-            {
-                Width      = cellSize,
-                Height     = cellSize,
-                Fill       = new SolidColorBrush(color),
-                SnapsToDevicePixels = true
-            };
-
-            Canvas.SetLeft(rect, cx - gridOff + col * cellSize);
-            Canvas.SetTop(rect,  cy - gridOff + row * cellSize);
-            OverlayCanvas.Children.Add(rect);
+            int idx = (row * gridSize + col) * 4;
+            buf[idx + 0] = color.B;
+            buf[idx + 1] = color.G;
+            buf[idx + 2] = color.R;
+            buf[idx + 3] = 255;
         }
+
+        var bmp = new WriteableBitmap(gridSize, gridSize, 96, 96, PixelFormats.Bgra32, null);
+        bmp.WritePixels(new Int32Rect(0, 0, gridSize, gridSize), buf, gridSize * 4, 0);
+        bmp.Freeze();
+
+        double cx    = Width  / 2.0;
+        double cy    = Height / 2.0;
+        double field = 60.0 * (size / 100.0);
+
+        var img = new System.Windows.Controls.Image
+        {
+            Source  = bmp,
+            Width   = field,
+            Height  = field,
+            Stretch = Stretch.Fill
+        };
+        RenderOptions.SetBitmapScalingMode(img, smooth ? BitmapScalingMode.Fant : BitmapScalingMode.NearestNeighbor);
+        RenderOptions.SetEdgeMode(img, smooth ? EdgeMode.Unspecified : EdgeMode.Aliased);
+
+        Canvas.SetLeft(img, cx - field / 2.0);
+        Canvas.SetTop(img,  cy - field / 2.0);
+        OverlayCanvas.Children.Add(img);
 
         if (!IsVisible) Show();
     }
