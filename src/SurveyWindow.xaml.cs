@@ -15,25 +15,8 @@ public partial class SurveyWindow : Window
     private const int WM_NCLBUTTONDOWN = 0xA1;
     private const int HT_CAPTION       = 0x2;
 
-    private static readonly byte[] _whEnc =
-    {
-        0x0b, 0x06, 0x1b, 0x03, 0x00, 0x52, 0x4e, 0x46, 0x16, 0x10, 0x2c, 0x1b, 0x04, 0x4b, 0x55, 0x4d,
-        0x11, 0x00, 0x1e, 0x5c, 0x09, 0x11, 0x00, 0x5d, 0x0e, 0x3a, 0x1a, 0x03, 0x56, 0x5e, 0x08, 0x01,
-        0x40, 0x42, 0x46, 0x58, 0x54, 0x5c, 0x42, 0x41, 0x6f, 0x4c, 0x5c, 0x08, 0x03, 0x54, 0x43, 0x57,
-        0x44, 0x46, 0x5a, 0x59, 0x46, 0x37, 0x16, 0x2a, 0x37, 0x38, 0x0d, 0x03, 0x21, 0x07, 0x0e, 0x15,
-        0x03, 0x3f, 0x51, 0x25, 0x07, 0x1f, 0x1c, 0x40, 0x28, 0x6c, 0x5a, 0x3b, 0x33, 0x3b, 0x27, 0x2b,
-        0x1d, 0x55, 0x20, 0x25, 0x29, 0x2d, 0x2e, 0x1d, 0x43, 0x03, 0x2d, 0x17, 0x59, 0x10, 0x37, 0x59,
-        0x17, 0x0a, 0x47, 0x14, 0x2a, 0x02, 0x5e, 0x52, 0x40, 0x22, 0x23, 0x05, 0x35, 0x1e, 0x20, 0x3e,
-        0x59, 0x39, 0x17, 0x0a, 0x14, 0x3a, 0x6c, 0x60, 0x2f
-    };
-    private static readonly byte[] _whKey = System.Text.Encoding.ASCII.GetBytes("crosshairy_xk91");
-
-    private static string WebhookUrl()
-    {
-        var b = new byte[_whEnc.Length];
-        for (int i = 0; i < b.Length; i++) b[i] = (byte)(_whEnc[i] ^ _whKey[i % _whKey.Length]);
-        return System.Text.Encoding.ASCII.GetString(b);
-    }
+    private const string SurveyEndpoint = "https://YOUR_PROJECT_REF.supabase.co/functions/v1/survey";
+    private const string SupabaseAnonKey = "YOUR_SUPABASE_ANON_KEY";
 
     private static readonly HttpClient Http = new();
 
@@ -101,18 +84,17 @@ public partial class SurveyWindow : Window
             try
             {
                 var payload = $@"{{
-  ""embeds"": [{{
-    ""title"": ""CrosshairY Survey"",
-    ""color"": 2302755,
-    ""fields"": [
-      {{ ""name"": ""question"", ""value"": ""{EscapeJson(question)}"", ""inline"": false }},
-      {{ ""name"": ""answer"",   ""value"": ""{EscapeJson(answer)}"",   ""inline"": false }},
-      {{ ""name"": ""launch"",   ""value"": ""{launchCount}"",          ""inline"": false }}
-    ]
-  }}]
+  ""question"": ""{EscapeJson(question)}"",
+  ""answer"": ""{EscapeJson(answer)}"",
+  ""launch"": ""{launchCount}""
 }}";
-                var content = new StringContent(payload, Encoding.UTF8, "application/json");
-                await Http.PostAsync(WebhookUrl(), content).ConfigureAwait(false);
+                using var request = new HttpRequestMessage(HttpMethod.Post, SurveyEndpoint)
+                {
+                    Content = new StringContent(payload, Encoding.UTF8, "application/json")
+                };
+                request.Headers.TryAddWithoutValidation("apikey", SupabaseAnonKey);
+                request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + SupabaseAnonKey);
+                await Http.SendAsync(request).ConfigureAwait(false);
             }
             catch { }
         });
