@@ -564,6 +564,31 @@
                                                               Checked="BuilderSmoothToggle_Changed"
                                                               Unchecked="BuilderSmoothToggle_Changed"/>
                                             </Grid>
+
+                                            <Grid Margin="0,14,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="6"/>
+                                                    <ColumnDefinition Width="64"/>
+                                                    <ColumnDefinition Width="6"/>
+                                                    <ColumnDefinition Width="64"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Button x:Name="BuilderMirrorBtn"
+                                                        Grid.Column="0"
+                                                        Content="MIRROR: OFF"
+                                                        Style="{StaticResource DarkBtn}"
+                                                        Click="BuilderMirror_Click"/>
+                                                <Button x:Name="BuilderUndoBtn"
+                                                        Grid.Column="2"
+                                                        Content="UNDO"
+                                                        Style="{StaticResource DarkBtn}"
+                                                        Click="BuilderUndo_Click"/>
+                                                <Button x:Name="BuilderRedoBtn"
+                                                        Grid.Column="4"
+                                                        Content="REDO"
+                                                        Style="{StaticResource DarkBtn}"
+                                                        Click="BuilderRedo_Click"/>
+                                            </Grid>
                                         </StackPanel>
                                     </Border>
 

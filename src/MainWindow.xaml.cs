@@ -40,6 +40,12 @@ public partial class MainWindow : Window
     private int  _strokeStartR, _strokeStartC;
     private string?[,]? _builderPreview;
 
+    private enum BuilderSymmetry { None, MirrorX, MirrorY, Both }
+    private BuilderSymmetry _builderSymmetry = BuilderSymmetry.None;
+
+    private readonly Stack<string?[,]> _undoStack = new();
+    private readonly Stack<string?[,]> _redoStack = new();
+
     private static readonly string AppDir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrosshairY");
 
@@ -116,6 +122,8 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         SourceInitialized += (_, _) => ApplyCaptureAffinity();
+
+        PreviewKeyDown += OnBuilderPreviewKeyDown;
 
         Loaded += (_, _) =>
         {
@@ -1322,6 +1330,8 @@ public partial class MainWindow : Window
         UpdateBuilderModeLabel();
         UpdateBuilderSizeButtons();
         UpdateBuilderToolButtons();
+        UpdateBuilderMirrorButton();
+        UpdateUndoRedoButtons();
     }
 
     private void RebuildBuilderGrid(int size)
@@ -1329,6 +1339,9 @@ public partial class MainWindow : Window
         _builderSize = size;
         _builderGrid = new string?[size, size];
         _builderPreview = null;
+        _undoStack.Clear();
+        _redoStack.Clear();
+        UpdateUndoRedoButtons();
 
         if (_builderGridControl == null)
         {
@@ -1397,18 +1410,44 @@ public partial class MainWindow : Window
         _builderGrid[row, col] = value;
     }
 
+    private void PaintCellSym(int row, int col, string? value)
+    {
+        foreach (var (r, c) in SymCells(row, col))
+            SetBuilderCell(r, c, value);
+    }
+
+    private IEnumerable<(int r, int c)> SymCells(int row, int col)
+    {
+        yield return (row, col);
+        int mr = _builderSize - 1 - row;
+        int mc = _builderSize - 1 - col;
+        if (_builderSymmetry is BuilderSymmetry.MirrorX or BuilderSymmetry.Both) yield return (row, mc);
+        if (_builderSymmetry is BuilderSymmetry.MirrorY or BuilderSymmetry.Both) yield return (mr, col);
+        if (_builderSymmetry is BuilderSymmetry.Both) yield return (mr, mc);
+    }
+
+    private string?[,] CloneBuilderGrid() => (string?[,])_builderGrid.Clone();
+
+    private void PushUndo()
+    {
+        _undoStack.Push(CloneBuilderGrid());
+        _redoStack.Clear();
+        UpdateUndoRedoButtons();
+    }
+
     private void OnBuilderStrokeStart(int row, int col)
     {
         _strokeActive = true;
         _strokeStartR = row;
         _strokeStartC = col;
+        PushUndo();
 
         switch (_builderTool)
         {
-            case BuilderTool.Pencil:  SetBuilderCell(row, col, _builderColor); CommitGridChange(); break;
-            case BuilderTool.Eraser:  SetBuilderCell(row, col, null);          CommitGridChange(); break;
-            case BuilderTool.Fill:    FloodFill(row, col);                     CommitGridChange(); break;
-            default:                  ShowShapePreview(row, col);              break;
+            case BuilderTool.Pencil:  PaintCellSym(row, col, _builderColor); CommitGridChange(); break;
+            case BuilderTool.Eraser:  PaintCellSym(row, col, null);          CommitGridChange(); break;
+            case BuilderTool.Fill:    FloodFill(row, col);                   CommitGridChange(); break;
+            default:                  ShowShapePreview(row, col);            break;
         }
     }
 
@@ -1418,10 +1457,10 @@ public partial class MainWindow : Window
 
         switch (_builderTool)
         {
-            case BuilderTool.Pencil:  SetBuilderCell(row, col, _builderColor); CommitGridChange(); break;
-            case BuilderTool.Eraser:  SetBuilderCell(row, col, null);          CommitGridChange(); break;
+            case BuilderTool.Pencil:  PaintCellSym(row, col, _builderColor); CommitGridChange(); break;
+            case BuilderTool.Eraser:  PaintCellSym(row, col, null);          CommitGridChange(); break;
             case BuilderTool.Fill:    break;
-            default:                  ShowShapePreview(row, col);              break;
+            default:                  ShowShapePreview(row, col);            break;
         }
     }
 
@@ -1433,11 +1472,66 @@ public partial class MainWindow : Window
         if (_builderTool is BuilderTool.Line or BuilderTool.Rect or BuilderTool.Ellipse)
         {
             foreach (var (r, c) in ShapeCells(_strokeStartR, _strokeStartC, row, col, _builderTool))
-                SetBuilderCell(r, c, _builderColor);
+                PaintCellSym(r, c, _builderColor);
             _builderPreview = null;
             _builderGridControl?.SetPreview(null);
             CommitGridChange();
         }
+    }
+
+    private void BuilderUndo()
+    {
+        if (_undoStack.Count == 0) return;
+        _redoStack.Push(CloneBuilderGrid());
+        _builderGrid = _undoStack.Pop();
+        _builderGridControl?.SetGrid(_builderSize, _builderGrid);
+        FlushBuilderToState();
+        UpdateUndoRedoButtons();
+    }
+
+    private void BuilderRedo()
+    {
+        if (_redoStack.Count == 0) return;
+        _undoStack.Push(CloneBuilderGrid());
+        _builderGrid = _redoStack.Pop();
+        _builderGridControl?.SetGrid(_builderSize, _builderGrid);
+        FlushBuilderToState();
+        UpdateUndoRedoButtons();
+    }
+
+    private void UpdateUndoRedoButtons()
+    {
+        if (BuilderUndoBtn != null) BuilderUndoBtn.IsEnabled = _undoStack.Count > 0;
+        if (BuilderRedoBtn != null) BuilderRedoBtn.IsEnabled = _redoStack.Count > 0;
+    }
+
+    private void BuilderUndo_Click(object s, RoutedEventArgs e) => BuilderUndo();
+    private void BuilderRedo_Click(object s, RoutedEventArgs e) => BuilderRedo();
+
+    private void BuilderMirror_Click(object s, RoutedEventArgs e)
+    {
+        _builderSymmetry = (BuilderSymmetry)(((int)_builderSymmetry + 1) % 4);
+        UpdateBuilderMirrorButton();
+    }
+
+    private void UpdateBuilderMirrorButton()
+    {
+        if (BuilderMirrorBtn == null) return;
+        BuilderMirrorBtn.Content = _builderSymmetry switch
+        {
+            BuilderSymmetry.MirrorX => "MIRROR: LEFT/RIGHT",
+            BuilderSymmetry.MirrorY => "MIRROR: UP/DOWN",
+            BuilderSymmetry.Both    => "MIRROR: 4-WAY",
+            _                       => "MIRROR: OFF"
+        };
+    }
+
+    private void OnBuilderPreviewKeyDown(object s, System.Windows.Input.KeyEventArgs e)
+    {
+        if (BuilderPanel == null || BuilderPanel.Visibility != Visibility.Visible) return;
+        if (Keyboard.Modifiers != ModifierKeys.Control) return;
+        if (e.Key == Key.Z)      { BuilderUndo(); e.Handled = true; }
+        else if (e.Key == Key.Y) { BuilderRedo(); e.Handled = true; }
     }
 
     private void CommitGridChange()
@@ -1449,9 +1543,10 @@ public partial class MainWindow : Window
     private void ShowShapePreview(int row, int col)
     {
         _builderPreview = new string?[_builderSize, _builderSize];
-        foreach (var (r, c) in ShapeCells(_strokeStartR, _strokeStartC, row, col, _builderTool))
-            if (r >= 0 && r < _builderSize && c >= 0 && c < _builderSize)
-                _builderPreview[r, c] = _builderColor;
+        foreach (var (br, bc) in ShapeCells(_strokeStartR, _strokeStartC, row, col, _builderTool))
+            foreach (var (r, c) in SymCells(br, bc))
+                if (r >= 0 && r < _builderSize && c >= 0 && c < _builderSize)
+                    _builderPreview[r, c] = _builderColor;
         _builderGridControl?.SetPreview(_builderPreview);
     }
 
@@ -1585,6 +1680,7 @@ public partial class MainWindow : Window
     private void BuilderClear_Click(object s, RoutedEventArgs e)
     {
         if (_builderGridControl == null) return;
+        PushUndo();
         Array.Clear(_builderGrid, 0, _builderGrid.Length);
         _builderPreview = null;
         _builderGridControl.SetPreview(null);
