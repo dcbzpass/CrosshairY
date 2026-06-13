@@ -359,7 +359,8 @@ public partial class MainWindow : Window
             TryLoadLastUsed();
             InitCrosshairsPanel();
             InitBuilderPanel();
-            RefreshCrosshairOverlay();
+            UpdateMonitorButtons();
+            ApplyMonitorToOverlay();
         };
         StartupGrid.BeginAnimation(OpacityProperty, fade);
     }
@@ -400,6 +401,63 @@ public partial class MainWindow : Window
     {
         ProofKeyBtn.Content  = DisplayKey(_s.ProofKey);
         CycleKeyBtn.Content  = string.IsNullOrEmpty(_s.CycleKey) ? "NONE" : DisplayKey(_s.CycleKey);
+        BuildMonitorButtons();
+    }
+
+    private void BuildMonitorButtons()
+    {
+        if (MonitorPanel == null) return;
+        MonitorPanel.Children.Clear();
+
+        var screens = System.Windows.Forms.Screen.AllScreens;
+        if (_s.MonitorIndex < 0 || _s.MonitorIndex >= screens.Length) _s.MonitorIndex = 0;
+
+        for (int i = 0; i < screens.Length; i++)
+        {
+            var b       = screens[i].Bounds;
+            var primary = screens[i].Primary ? "  (primary)" : "";
+            var btn = new Button
+            {
+                Content             = $"DISPLAY {i + 1}  ·  {b.Width}×{b.Height}{primary}",
+                Style               = (Style)FindResource("DarkBtn"),
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = System.Windows.HorizontalAlignment.Left,
+                Margin              = new Thickness(0, 0, 0, 6),
+                Tag                 = i
+            };
+            btn.Click += Monitor_Click;
+            MonitorPanel.Children.Add(btn);
+        }
+
+        UpdateMonitorButtons();
+    }
+
+    private void Monitor_Click(object s, RoutedEventArgs e)
+    {
+        if (s is not Button btn || btn.Tag is not int idx) return;
+        _s.MonitorIndex = idx;
+        UpdateMonitorButtons();
+        ApplyMonitorToOverlay();
+        SaveSettings();
+    }
+
+    private void UpdateMonitorButtons()
+    {
+        if (MonitorPanel == null) return;
+        foreach (UIElement el in MonitorPanel.Children)
+        {
+            if (el is not Button btn || btn.Tag is not int idx) continue;
+            bool sel = idx == _s.MonitorIndex;
+            btn.Background = new SolidColorBrush(sel ? Color.FromRgb(0x2a, 0x2a, 0x2a) : Color.FromRgb(0x14, 0x14, 0x14));
+            btn.Foreground = new SolidColorBrush(sel ? Color.FromRgb(0xf5, 0xf5, 0xf5) : Color.FromRgb(0x8a, 0x8a, 0x8a));
+        }
+    }
+
+    private void ApplyMonitorToOverlay()
+    {
+        var dpi = VisualTreeHelper.GetDpi(this);
+        _crOverlay?.ApplyMonitor(_s.MonitorIndex, dpi.DpiScaleX, dpi.DpiScaleY);
+        RefreshCrosshairOverlay();
     }
 
     private void InitCrosshairsPanel()
@@ -1157,7 +1215,7 @@ public partial class MainWindow : Window
         try
         {
             Directory.CreateDirectory(AppDir);
-            var cfg = new { proof_key = _s.ProofKey, cycle_key = _s.CycleKey };
+            var cfg = new { proof_key = _s.ProofKey, cycle_key = _s.CycleKey, monitor_index = _s.MonitorIndex };
             File.WriteAllText(SettingsFile, JsonSerializer.Serialize(cfg));
         }
         catch { }
@@ -1172,6 +1230,7 @@ public partial class MainWindow : Window
             var r = doc.RootElement;
             if (r.TryGetProp("proof_key", out var v) && !string.IsNullOrEmpty(v)) _s.ProofKey = v;
             if (r.TryGetProp("cycle_key", out v))                                  _s.CycleKey = v;
+            if (r.TryGetProperty("monitor_index", out var mi) && mi.TryGetInt32(out var midx)) _s.MonitorIndex = midx;
         }
         catch { }
     }

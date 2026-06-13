@@ -103,6 +103,22 @@ public partial class CrosshairOverlay : Window
         SetWindowDisplayAffinity(hwnd, active ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE);
     }
 
+    public void ApplyMonitor(int index, double scaleX, double scaleY)
+    {
+        var screens = System.Windows.Forms.Screen.AllScreens;
+        if (index < 0 || index >= screens.Length) index = 0;
+        if (screens.Length == 0) return;
+
+        var b = screens[index].Bounds;
+        if (scaleX <= 0) scaleX = 1;
+        if (scaleY <= 0) scaleY = 1;
+
+        Left   = b.Left   / scaleX;
+        Top    = b.Top    / scaleY;
+        Width  = b.Width  / scaleX;
+        Height = b.Height / scaleY;
+    }
+
     public void UpdateCrosshair(string template, string color, bool outline, int outlineSize, int size, int opacity, int gap)
     {
         if (string.IsNullOrEmpty(template))

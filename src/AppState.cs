@@ -7,6 +7,8 @@ public class AppState
 
     public bool CaptureHidden { get; set; } = false;
 
+    public int MonitorIndex { get; set; } = 0;
+
     public string CrTemplate    { get; set; } = "";
     public string CrColor       { get; set; } = "#ffffff";
     public bool   CrOutline     { get; set; } = false;
