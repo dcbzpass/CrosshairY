@@ -22,14 +22,19 @@ CrosshairY draws a persistent crosshair directly on your screen as a transparent
 
 ## Features
 
-- **17 crosshair templates** - Dot, Ring, Square, Thin Cross, Thick Cross, Cross·, T-Shape, Circle+, Small Plus, Large Plus, Sniper, X Cross, X·, Arrows, Chevrons, Triangle, Diamond
+- **22 crosshair templates** - Dot, Ring, Square, Thin Cross, Thick Cross, Cross·, T-Shape, Circle+, Small Plus, Large Plus, Sniper, X Cross, X·, Arrows, Chevrons, Triangle, Diamond, Dot Ring, 2 Rings, Plus·, Corners, X Thick
 - **8 color swatches** with live preview plus a full **custom color picker** - square saturation/value field, hue bar and free hex input
-- **Crosshair builder** - draw your own pixel crosshair on a 15x15, 30x30 or 60x60 grid with a 16-color palette, draw/erase modes and clear
+- **Crosshair builder** - draw your own crosshair on a 15x15, 30x30 or 60x60 grid with a 16-color palette and a full tool set: **pencil, eraser, fill (bucket), line, rectangle and ellipse**
+  - **Undo / redo** with Ctrl+Z / Ctrl+Y
+  - **Mirror symmetry** - left/right, up/down or 4-way mirroring while you draw
+  - **Antialiasing toggle** - smooth, crisp scaling of your drawing on the overlay (or keep hard pixels)
+  - **Save as crosshair** - pin your drawing into the "My Crosshairs" grid for one-click reuse
 - **Randomize button** - picks a random template and color instantly
 - **Outline toggle** with adjustable thickness (1-5)
 - **Size slider** from 50% to 200%
 - **Opacity slider** from 10% to 100%
 - **Center gap slider** - control the gap between crosshair arms (0-20)
+- **Multi-monitor** - pick which display the crosshair appears on
 - **Profile system** - save, load, overwrite and delete configs stored locally in `%APPDATA%\CrosshairY\Configs`. Drop a friend's `.json` in the folder and hit reload
 - **Share codes** - export the current config to the clipboard as a compact code and import a friend's code in one click
 - **Last used config** auto-loads on startup
@@ -101,17 +106,9 @@ Pressing the configured proof key calls `SetWindowDisplayAffinity(WDA_EXCLUDEFRO
 
 ## Surveys
 
-At launch counts 3, 7, 15, and 30 a small popup appears with a single question before the main UI loads. Each survey shows at most once. Closing without answering defers it to the next launch. Responses are sent to a Discord webhook and the launch counter is stored in `%APPDATA%\CrosshairY\launches.dat`.
+At launch counts 3, 7, 15, and 30 a small popup appears with a single question before the main UI loads. Each survey shows at most once. Closing without answering defers it to the next launch. The launch counter is stored in `%APPDATA%\CrosshairY\launches.dat`.
 
-### Replacing the webhook URL
-
-The webhook URL is XOR-encoded at build time so it does not appear as plaintext in the binary. To use your own webhook, run the included helper script:
-
-```
-python encode_webhook.py
-```
-
-Paste your Discord webhook URL when prompted. Copy the output block into `SurveyWindow.xaml.cs`, replacing the existing `_whEnc` array. The key and decoder method stay unchanged.
+Survey responses are sent to a **Supabase Edge Function**, which forwards them to a Discord webhook stored as a server-side secret. The real webhook never ships in the client - the app only knows the public Supabase endpoint and publishable key. To point it at your own backend, change `SurveyEndpoint` and `SupabaseAnonKey` in `SurveyWindow.xaml.cs` and set the `DISCORD_WEBHOOK_URL` secret on your Supabase project.
 
 ---
 
@@ -128,7 +125,7 @@ CrosshairY/
 |   +-- CrosshairOverlay.xaml       - transparent overlay window
 |   +-- CrosshairOverlay.xaml.cs    - crosshair draw logic (CrDraw)
 |   +-- SurveyWindow.xaml           - survey popup layout
-|   +-- SurveyWindow.xaml.cs        - survey logic and webhook
+|   +-- SurveyWindow.xaml.cs        - survey logic, posts to the Supabase endpoint
 |
 +-- Fonts/                          - Bebas Neue + IBM Plex Mono
 +-- App.xaml                        - styles and resources
@@ -136,7 +133,6 @@ CrosshairY/
 +-- GlobalUsings.cs                 - shared global using directives
 +-- CrosshairY.csproj
 +-- app.manifest                    - DPI awareness
-+-- encode_webhook.py               - tool to encode a custom webhook url
 +-- build.bat
 +-- clean.bat
 ```
