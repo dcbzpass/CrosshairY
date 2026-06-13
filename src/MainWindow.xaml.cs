@@ -46,6 +46,8 @@ public partial class MainWindow : Window
     private readonly Stack<string?[,]> _undoStack = new();
     private readonly Stack<string?[,]> _redoStack = new();
 
+    private string? _activeCustomName;
+
     private static readonly string AppDir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrosshairY");
 
@@ -60,6 +62,9 @@ public partial class MainWindow : Window
 
     private static readonly string SettingsFile =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrosshairY", "settings.dat");
+
+    private static readonly string CustomTemplatesFile =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CrosshairY", "custom_crosshairs.json");
 
     private static readonly (string id, string name)[] CrTemplates =
     {
@@ -79,7 +84,12 @@ public partial class MainWindow : Window
         ("inward_arrows",    "Arrows"),
         ("outward_chevrons", "Chevrons"),
         ("triangle",         "Triangle"),
-        ("diamond",          "Diamond")
+        ("diamond",          "Diamond"),
+        ("dot_ring",         "Dot Ring"),
+        ("double_ring",      "2 Rings"),
+        ("plus_dot",         "Plus·"),
+        ("brackets",         "Corners"),
+        ("x_thick",          "X Thick")
     };
 
     private static readonly string[] CrColors =
@@ -480,6 +490,7 @@ public partial class MainWindow : Window
 
         UpdateTemplateTileSelection();
         UpdateColorSwatchSelection();
+        InitCustomTemplatesPanel();
 
         CrOutlineToggle.IsChecked   = _s.CrOutline;
         CrOutlineSizeSlider.Value   = _s.CrOutlineSize;
@@ -532,7 +543,9 @@ public partial class MainWindow : Window
         border.MouseLeftButtonDown += (_, _) =>
         {
             _s.CrTemplate = _s.CrTemplate == id ? "" : id;
+            _activeCustomName = null;
             UpdateTemplateTileSelection();
+            InitCustomTemplatesPanel();
             RefreshCrosshairOverlay();
         };
 
@@ -591,6 +604,192 @@ public partial class MainWindow : Window
         foreach (UIElement el in CrTemplatePanel.Children)
             if (el is Border b && b.Child is StackPanel sp && sp.Children.Count > 0 && sp.Children[0] is Canvas canvas)
                 CrDraw.Draw(canvas, 32, 32, 0.5, _s.CrColor, _s.CrOutline, _s.CrOutlineSize, b.Tag as string ?? "");
+    }
+
+    private List<CustomTemplate> LoadCustomTemplates()
+    {
+        try
+        {
+            if (File.Exists(CustomTemplatesFile))
+                return JsonSerializer.Deserialize<List<CustomTemplate>>(File.ReadAllText(CustomTemplatesFile)) ?? new();
+        }
+        catch { }
+        return new();
+    }
+
+    private void SaveCustomTemplates(List<CustomTemplate> list)
+    {
+        try
+        {
+            Directory.CreateDirectory(AppDir);
+            File.WriteAllText(CustomTemplatesFile, JsonSerializer.Serialize(list, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch { }
+    }
+
+    private void BuilderSaveTemplate_Click(object s, RoutedEventArgs e)
+    {
+        FlushBuilderToState();
+        if (_s.CrCustomPixels.Count == 0) return;
+
+        var name = BuilderTemplateName.Text.Trim();
+        if (string.IsNullOrEmpty(name)) name = "custom";
+
+        var list = LoadCustomTemplates();
+        list.RemoveAll(t => string.Equals(t.name, name, StringComparison.OrdinalIgnoreCase));
+        list.Add(new CustomTemplate { name = name, size = _builderSize, pixels = new List<string>(_s.CrCustomPixels) });
+        SaveCustomTemplates(list);
+
+        _activeCustomName = name;
+        InitCustomTemplatesPanel();
+
+        if (s is Button btn)
+        {
+            var prev = btn.Content;
+            btn.Content = "SAVED!";
+            var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1400) };
+            t.Tick += (_, _) => { t.Stop(); btn.Content = prev; };
+            t.Start();
+        }
+    }
+
+    private void InitCustomTemplatesPanel()
+    {
+        if (CustomTemplatePanel == null) return;
+        CustomTemplatePanel.Children.Clear();
+
+        var list = LoadCustomTemplates();
+        CustomTemplateBorder.Visibility = list.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+
+        foreach (var t in list)
+            CustomTemplatePanel.Children.Add(BuildCustomTile(t));
+    }
+
+    private UIElement BuildCustomTile(CustomTemplate t)
+    {
+        var canvas = new Canvas
+        {
+            Width      = 64,
+            Height     = 64,
+            Background = new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x14))
+        };
+        DrawCustomPreview(canvas, t.pixels, t.size, 64);
+
+        var label = new TextBlock
+        {
+            Text                = t.name,
+            FontFamily          = (FontFamily)FindResource("IBMPlexMono"),
+            FontSize            = 8,
+            Foreground          = new SolidColorBrush(Color.FromRgb(0x5a, 0x5a, 0x5a)),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            Margin              = new Thickness(0, 4, 0, 0),
+            MaxWidth            = 70,
+            TextTrimming        = TextTrimming.CharacterEllipsis
+        };
+
+        var inner = new StackPanel();
+        inner.Children.Add(canvas);
+        inner.Children.Add(label);
+
+        var del = new Button
+        {
+            Content             = "×",
+            Width               = 16,
+            Height              = 16,
+            Padding             = new Thickness(0),
+            FontFamily          = (FontFamily)FindResource("IBMPlexMono"),
+            FontSize            = 11,
+            Foreground          = new SolidColorBrush(Color.FromRgb(0x8a, 0x8a, 0x8a)),
+            Background          = new SolidColorBrush(Color.FromRgb(0x1e, 0x1e, 0x1e)),
+            BorderThickness     = new Thickness(0),
+            Cursor              = Cursors.Hand,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+            VerticalAlignment   = System.Windows.VerticalAlignment.Top,
+            Margin              = new Thickness(0, 2, 2, 0)
+        };
+        del.Click += (_, ev) => { ev.Handled = true; DeleteCustomTemplate(t.name); };
+
+        var grid = new Grid();
+        grid.Children.Add(inner);
+        grid.Children.Add(del);
+
+        var border = new Border
+        {
+            Width           = 74,
+            Height          = 88,
+            Padding         = new Thickness(4),
+            BorderThickness = new Thickness(1),
+            BorderBrush     = new SolidColorBrush(_activeCustomName == t.name
+                ? Color.FromRgb(0xf5, 0xf5, 0xf5)
+                : Color.FromRgb(0x1e, 0x1e, 0x1e)),
+            Margin          = new Thickness(0, 0, 6, 6),
+            Cursor          = Cursors.Hand,
+            Child           = grid
+        };
+
+        border.MouseLeftButtonDown += (_, _) => LoadCustomTemplate(t);
+        return border;
+    }
+
+    private void DrawCustomPreview(Canvas canvas, List<string> pixels, int size, double box)
+    {
+        canvas.Children.Clear();
+        if (size <= 0) return;
+
+        double pad   = 4;
+        double field = box - pad * 2;
+        double cell  = field / size;
+
+        foreach (var entry in pixels)
+        {
+            var parts = entry.Split(',');
+            if (parts.Length < 3) continue;
+            if (!int.TryParse(parts[0], out int row) || !int.TryParse(parts[1], out int col)) continue;
+
+            Color color;
+            try   { color = (Color)ColorConverter.ConvertFromString(parts[2]); }
+            catch { color = Colors.White; }
+
+            var rect = new System.Windows.Shapes.Rectangle
+            {
+                Width  = cell + 0.5,
+                Height = cell + 0.5,
+                Fill   = new SolidColorBrush(color)
+            };
+            Canvas.SetLeft(rect, pad + col * cell);
+            Canvas.SetTop(rect,  pad + row * cell);
+            canvas.Children.Add(rect);
+        }
+    }
+
+    private void LoadCustomTemplate(CustomTemplate t)
+    {
+        _s.CrCustomPixels = new List<string>(t.pixels);
+        int gs = t.size <= 15 ? 15 : t.size <= 30 ? 30 : 60;
+        _s.CrBuilderSize = gs;
+        _builderSize     = gs;
+        _s.CrTemplate    = "custom";
+        _activeCustomName = t.name;
+
+        if (_builderGridControl != null)
+        {
+            RebuildBuilderGrid(gs);
+            LoadBuilderGridFromState();
+            UpdateBuilderSizeButtons();
+        }
+
+        UpdateTemplateTileSelection();
+        InitCustomTemplatesPanel();
+        RefreshCrosshairOverlay();
+    }
+
+    private void DeleteCustomTemplate(string name)
+    {
+        var list = LoadCustomTemplates();
+        list.RemoveAll(t => string.Equals(t.name, name, StringComparison.OrdinalIgnoreCase));
+        SaveCustomTemplates(list);
+        if (_activeCustomName == name) _activeCustomName = null;
+        InitCustomTemplatesPanel();
     }
 
     private void RefreshCrosshairOverlay()
@@ -1627,6 +1826,7 @@ public partial class MainWindow : Window
                     _s.CrCustomPixels.Add($"{r},{c},{hex}");
 
         _s.CrTemplate = "custom";
+        _activeCustomName = null;
         UpdateTemplateTileSelection();
         RefreshCrosshairOverlay();
     }
@@ -1716,6 +1916,13 @@ public partial class MainWindow : Window
                 : new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x14));
         }
     }
+}
+
+internal sealed class CustomTemplate
+{
+    public string name { get; set; } = "";
+    public int size { get; set; } = 15;
+    public List<string> pixels { get; set; } = new();
 }
 
 internal static class JsonExt

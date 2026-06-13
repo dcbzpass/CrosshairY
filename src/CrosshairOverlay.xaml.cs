@@ -286,6 +286,61 @@ internal static class CrDraw
             case "diamond":
                 DrawDiamond(canvas, cx, cy, scale, brush, black, outline, outSize);
                 break;
+
+            case "dot_ring":
+            {
+                double r  = 6   * scale;
+                double st = 1.5 * scale;
+                if (outline) PutEllipseStroked(canvas, cx, cy, r, st + outSize * 2, black);
+                PutEllipseStroked(canvas, cx, cy, r, st, brush);
+                if (outline) PutEllipseFilled(canvas, cx, cy, 2 * scale + outSize, black);
+                PutEllipseFilled(canvas, cx, cy, 2 * scale, brush);
+                break;
+            }
+
+            case "double_ring":
+            {
+                double st = 1.2 * scale;
+                if (outline) PutEllipseStroked(canvas, cx, cy, 4 * scale, st + outSize * 2, black);
+                if (outline) PutEllipseStroked(canvas, cx, cy, 8 * scale, st + outSize * 2, black);
+                PutEllipseStroked(canvas, cx, cy, 4 * scale, st, brush);
+                PutEllipseStroked(canvas, cx, cy, 8 * scale, st, brush);
+                break;
+            }
+
+            case "plus_dot":
+                DrawCrossLines(canvas, cx, cy, scale, brush, black, outline, outSize, gap, 10, 2.0, true, false, false);
+                break;
+
+            case "brackets":
+                DrawBrackets(canvas, cx, cy, scale, brush, black, outline, outSize);
+                break;
+
+            case "x_thick":
+                DrawXLines(canvas, cx, cy, scale, brush, black, outline, outSize, 9, 3.0, false);
+                break;
+        }
+    }
+
+    static void DrawBrackets(Canvas c, double cx, double cy, double s,
+        Brush brush, Brush black, bool outline, double outSize)
+    {
+        double g   = 7   * s;
+        double len = 5   * s;
+        double t   = 1.5 * s;
+
+        var corners = new (double dx, double dy)[] { (-1, -1), (1, -1), (-1, 1), (1, 1) };
+        foreach (var (dx, dy) in corners)
+        {
+            double x = cx + dx * g;
+            double y = cy + dy * g;
+            if (outline)
+            {
+                PutLine(c, x, y, x - dx * len, y, black, t + outSize * 2);
+                PutLine(c, x, y, x, y - dy * len, black, t + outSize * 2);
+            }
+            PutLine(c, x, y, x - dx * len, y, brush, t);
+            PutLine(c, x, y, x, y - dy * len, brush, t);
         }
     }
 
