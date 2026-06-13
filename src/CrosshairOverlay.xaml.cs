@@ -131,7 +131,11 @@ public partial class CrosshairOverlay : Window
 
         OverlayCanvas.Opacity = opacity / 100.0;
 
-        var buf = new byte[gridSize * gridSize * 4];
+        int ss  = smooth ? System.Math.Max(4, (int)System.Math.Ceiling(320.0 / gridSize)) : 1;
+        int dim = gridSize * ss;
+        int stride = dim * 4;
+        var buf = new byte[dim * dim * 4];
+
         foreach (var entry in pixels)
         {
             var parts = entry.Split(',');
@@ -143,15 +147,22 @@ public partial class CrosshairOverlay : Window
             try   { color = (Color)ColorConverter.ConvertFromString(parts[2]); }
             catch { color = Colors.White; }
 
-            int idx = (row * gridSize + col) * 4;
-            buf[idx + 0] = color.B;
-            buf[idx + 1] = color.G;
-            buf[idx + 2] = color.R;
-            buf[idx + 3] = 255;
+            for (int by = 0; by < ss; by++)
+            {
+                int y = row * ss + by;
+                for (int bx = 0; bx < ss; bx++)
+                {
+                    int idx = y * stride + (col * ss + bx) * 4;
+                    buf[idx + 0] = color.B;
+                    buf[idx + 1] = color.G;
+                    buf[idx + 2] = color.R;
+                    buf[idx + 3] = 255;
+                }
+            }
         }
 
-        var bmp = new WriteableBitmap(gridSize, gridSize, 96, 96, PixelFormats.Bgra32, null);
-        bmp.WritePixels(new Int32Rect(0, 0, gridSize, gridSize), buf, gridSize * 4, 0);
+        var bmp = new WriteableBitmap(dim, dim, 96, 96, PixelFormats.Bgra32, null);
+        bmp.WritePixels(new Int32Rect(0, 0, dim, dim), buf, stride, 0);
         bmp.Freeze();
 
         double cx    = Width  / 2.0;
