@@ -29,6 +29,11 @@ public partial class MainWindow : Window
 
     private CrosshairOverlay? _crOverlay;
 
+    public const string Version = "1.0.6";
+    private string? _updateExeUrl;
+    private string? _updateHtmlUrl;
+    private bool    _updateBusy;
+
     private string   _builderColor    = "#ffffff";
     private int      _builderSize     = 15;
     private string?[,] _builderGrid  = new string?[15, 15];
@@ -379,6 +384,8 @@ public partial class MainWindow : Window
             InitBuilderPanel();
             UpdateMonitorButtons();
             ApplyMonitorToOverlay();
+            VersionLabel.Text = $" v{Version}";
+            _ = CheckForUpdatesAsync();
         };
         StartupGrid.BeginAnimation(OpacityProperty, fade);
     }
@@ -419,6 +426,7 @@ public partial class MainWindow : Window
     {
         ProofKeyBtn.Content  = DisplayKey(_s.ProofKey);
         CycleKeyBtn.Content  = string.IsNullOrEmpty(_s.CycleKey) ? "NONE" : DisplayKey(_s.CycleKey);
+        UpdateNotifyToggle.IsChecked = _s.UpdateNotifications;
         BuildMonitorButtons();
     }
 
@@ -900,6 +908,86 @@ public partial class MainWindow : Window
     {
         _s.CrFollowCursor = CrFollowToggle.IsChecked == true;
         RefreshCrosshairOverlay();
+    }
+
+    private void UpdateNotifyToggle_Changed(object s, RoutedEventArgs e)
+    {
+        _s.UpdateNotifications = UpdateNotifyToggle.IsChecked == true;
+        SaveSettings();
+        if (!_s.UpdateNotifications) HideUpdateToast();
+    }
+
+    private async System.Threading.Tasks.Task CheckForUpdatesAsync()
+    {
+        if (!_s.UpdateNotifications) return;
+
+        var rel = await Updater.GetLatestAsync();
+        if (rel == null || !Updater.IsNewer(Version, rel.Tag)) return;
+        if (!_s.UpdateNotifications) return;
+
+        _updateExeUrl  = rel.ExeUrl;
+        _updateHtmlUrl = rel.HtmlUrl;
+        ShowUpdateToast(rel.Tag);
+    }
+
+    private void ShowUpdateToast(string tag)
+    {
+        var v = tag.TrimStart('v', 'V');
+        UpdateToastText.Text        = $"Version {v} is ready to install.";
+        UpdateDownloadBtn.Content   = string.IsNullOrEmpty(_updateExeUrl) ? "VIEW RELEASE" : "DOWNLOAD & INSTALL";
+        UpdateDownloadBtn.IsEnabled = true;
+        UpdateDismissBtn.IsEnabled  = true;
+        UpdateToast.Visibility      = Visibility.Visible;
+
+        var fade  = new DoubleAnimation(0, 1, new Duration(TimeSpan.FromMilliseconds(280))) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+        var slide = new DoubleAnimation(24, 0, new Duration(TimeSpan.FromMilliseconds(280))) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+        UpdateToast.BeginAnimation(OpacityProperty, fade);
+        UpdateToastSlide.BeginAnimation(TranslateTransform.YProperty, slide);
+    }
+
+    private void HideUpdateToast()
+    {
+        if (UpdateToast.Visibility != Visibility.Visible) return;
+
+        var fade  = new DoubleAnimation(UpdateToast.Opacity, 0, new Duration(TimeSpan.FromMilliseconds(200))) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+        fade.Completed += (_, _) => UpdateToast.Visibility = Visibility.Collapsed;
+        var slide = new DoubleAnimation(0, 24, new Duration(TimeSpan.FromMilliseconds(200)));
+        UpdateToast.BeginAnimation(OpacityProperty, fade);
+        UpdateToastSlide.BeginAnimation(TranslateTransform.YProperty, slide);
+    }
+
+    private void UpdateDismiss_Click(object s, RoutedEventArgs e) => HideUpdateToast();
+
+    private async void UpdateDownload_Click(object s, RoutedEventArgs e)
+    {
+        if (_updateBusy) return;
+
+        if (string.IsNullOrEmpty(_updateExeUrl))
+        {
+            if (!string.IsNullOrEmpty(_updateHtmlUrl))
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_updateHtmlUrl) { UseShellExecute = true }); } catch { }
+            return;
+        }
+
+        _updateBusy                 = true;
+        UpdateDownloadBtn.IsEnabled = false;
+        UpdateDismissBtn.IsEnabled  = false;
+        UpdateDownloadBtn.Content   = "DOWNLOADING…";
+
+        var path = await Updater.DownloadAsync(_updateExeUrl);
+
+        if (path != null && Updater.LaunchSwapAndExit(path))
+        {
+            UpdateDownloadBtn.Content = "RESTARTING…";
+            PrepareForExit();
+            Application.Current.Shutdown(0);
+            return;
+        }
+
+        UpdateDownloadBtn.Content   = "FAILED — RETRY";
+        UpdateDownloadBtn.IsEnabled = true;
+        UpdateDismissBtn.IsEnabled  = true;
+        _updateBusy                 = false;
     }
 
     private static readonly Random _rng = new();
@@ -1494,7 +1582,7 @@ public partial class MainWindow : Window
         try
         {
             Directory.CreateDirectory(AppDir);
-            var cfg = new { proof_key = _s.ProofKey, cycle_key = _s.CycleKey, monitor_index = _s.MonitorIndex };
+            var cfg = new { proof_key = _s.ProofKey, cycle_key = _s.CycleKey, monitor_index = _s.MonitorIndex, update_notifications = _s.UpdateNotifications };
             File.WriteAllText(SettingsFile, JsonSerializer.Serialize(cfg));
         }
         catch { }
@@ -1510,6 +1598,8 @@ public partial class MainWindow : Window
             if (r.TryGetProp("proof_key", out var v) && !string.IsNullOrEmpty(v)) _s.ProofKey = v;
             if (r.TryGetProp("cycle_key", out v))                                  _s.CycleKey = v;
             if (r.TryGetProperty("monitor_index", out var mi) && mi.TryGetInt32(out var midx)) _s.MonitorIndex = midx;
+            if (r.TryGetProperty("update_notifications", out var un) && un.ValueKind == JsonValueKind.False) _s.UpdateNotifications = false;
+            if (UpdateNotifyToggle != null) UpdateNotifyToggle.IsChecked = _s.UpdateNotifications;
         }
         catch { }
     }

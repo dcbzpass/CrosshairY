@@ -70,7 +70,8 @@
                                            FontSize="13"
                                            Foreground="#f5f5f5"
                                            VerticalAlignment="Center"/>
-                                <TextBlock Text=" v1.0.6"
+                                <TextBlock x:Name="VersionLabel"
+                                           Text=" v1.0.6"
                                            FontFamily="{StaticResource IBMPlexMono}"
                                            FontSize="9"
                                            Foreground="#2a2a2a"
@@ -810,6 +811,28 @@
                                                     Style="{StaticResource DarkBtn}"
                                                     HorizontalAlignment="Stretch"
                                                     Click="CycleKeyBtn_Click"/>
+
+                                            <Border BorderBrush="#1e1e1e" BorderThickness="0,1,0,0"
+                                                    Margin="0,16,0,0" Padding="0,14,0,0">
+                                                <Grid>
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock Text="UPDATE NOTIFICATIONS"
+                                                                   FontFamily="{StaticResource IBMPlexMono}"
+                                                                   FontSize="9" FontWeight="Bold"
+                                                                   Foreground="#f5f5f5"/>
+                                                        <TextBlock Text="Notify me on startup when a new release is available"
+                                                                   FontFamily="{StaticResource IBMPlexMono}"
+                                                                   FontSize="9" Foreground="#787878"
+                                                                   Margin="0,3,0,0"/>
+                                                    </StackPanel>
+                                                    <ToggleButton x:Name="UpdateNotifyToggle"
+                                                                  Style="{StaticResource ToggleSwitch}"
+                                                                  HorizontalAlignment="Right"
+                                                                  VerticalAlignment="Center"
+                                                                  Checked="UpdateNotifyToggle_Changed"
+                                                                  Unchecked="UpdateNotifyToggle_Changed"/>
+                                                </Grid>
+                                            </Border>
                                         </StackPanel>
                                     </Border>
 
@@ -913,6 +936,50 @@
 
                     </Grid>
                 </Grid>
+            </Border>
+
+            <Border x:Name="UpdateToast"
+                    Panel.ZIndex="60"
+                    Visibility="Collapsed"
+                    Opacity="0"
+                    VerticalAlignment="Bottom"
+                    HorizontalAlignment="Right"
+                    Margin="0,0,18,18"
+                    Width="290"
+                    Background="#0f0f0f"
+                    BorderBrush="#1e1e1e"
+                    BorderThickness="1"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="UpdateToastSlide" Y="24"/>
+                </Border.RenderTransform>
+                <StackPanel Margin="16,12,12,14">
+                    <Grid Margin="0,0,0,6">
+                        <TextBlock Text="UPDATE AVAILABLE"
+                                   FontFamily="{StaticResource BebasNeue}"
+                                   FontSize="17"
+                                   Foreground="#f5f5f5"
+                                   VerticalAlignment="Center"/>
+                        <Button x:Name="UpdateDismissBtn"
+                                Style="{StaticResource TitleCloseBtn}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Margin="0,-4,-4,0"
+                                Click="UpdateDismiss_Click"/>
+                    </Grid>
+                    <TextBlock x:Name="UpdateToastText"
+                               Text="A new version is ready to install."
+                               FontFamily="{StaticResource IBMPlexMono}"
+                               FontSize="9"
+                               Foreground="#787878"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,12"/>
+                    <Button x:Name="UpdateDownloadBtn"
+                            Content="DOWNLOAD &amp; INSTALL"
+                            Style="{StaticResource DarkBtn}"
+                            HorizontalAlignment="Stretch"
+                            Click="UpdateDownload_Click"/>
+                </StackPanel>
             </Border>
 
             <Border x:Name="GoodbyeOverlay"
