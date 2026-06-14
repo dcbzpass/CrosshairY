@@ -25,6 +25,12 @@ public partial class CrosshairOverlay : Window
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
         int X, int Y, int cx, int cy, uint uFlags);
 
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out POINT lpPoint);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT { public int X; public int Y; }
+
     private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd,
         int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
 
@@ -54,6 +60,14 @@ public partial class CrosshairOverlay : Window
     private WinEventDelegate? _winEventProc;
     private IntPtr _winEventHook;
 
+    private readonly TranslateTransform _xform = new();
+    private double _offsetX;
+    private double _offsetY;
+    private bool   _follow;
+    private bool   _renderHooked;
+    private double _scaleX = 1.0;
+    private double _scaleY = 1.0;
+
     public CrosshairOverlay()
     {
         InitializeComponent();
@@ -61,6 +75,7 @@ public partial class CrosshairOverlay : Window
         Height = SystemParameters.PrimaryScreenHeight;
         Left   = 0;
         Top    = 0;
+        OverlayCanvas.RenderTransform = _xform;
 
         SourceInitialized += (_, _) =>
         {
@@ -85,6 +100,7 @@ public partial class CrosshairOverlay : Window
 
         Closed += (_, _) =>
         {
+            StopFollow();
             if (_winEventHook != IntPtr.Zero) UnhookWinEvent(_winEventHook);
         };
     }
@@ -112,16 +128,20 @@ public partial class CrosshairOverlay : Window
         if (scaleX <= 0) scaleX = 1;
         if (scaleY <= 0) scaleY = 1;
 
+        _scaleX = scaleX;
+        _scaleY = scaleY;
+
         Left   = b.Left   / scaleX;
         Top    = b.Top    / scaleY;
         Width  = b.Width  / scaleX;
         Height = b.Height / scaleY;
     }
 
-    public void UpdateCrosshair(string template, string color, bool outline, int outlineSize, int size, int opacity, int gap)
+    public void UpdateCrosshair(string template, string color, bool outline, int outlineSize, int size, int opacity, int gap, int offsetX, int offsetY, bool follow)
     {
         if (string.IsNullOrEmpty(template))
         {
+            StopFollow();
             if (IsVisible) Hide();
             return;
         }
@@ -131,15 +151,18 @@ public partial class CrosshairOverlay : Window
         OverlayCanvas.Opacity = opacity / 100.0;
         CrDraw.Draw(OverlayCanvas, cx, cy, size / 100.0, color, outline, outlineSize, template, gap);
 
+        ApplyPositioning(offsetX, offsetY, follow);
+
         if (!IsVisible) Show();
     }
 
-    public void UpdateCustomCrosshair(List<string> pixels, int size, int opacity, int gridSize)
+    public void UpdateCustomCrosshair(List<string> pixels, int size, int opacity, int gridSize, int offsetX, int offsetY, bool follow)
     {
         OverlayCanvas.Children.Clear();
 
         if (pixels.Count == 0 || gridSize <= 0)
         {
+            StopFollow();
             if (IsVisible) Hide();
             return;
         }
@@ -184,7 +207,50 @@ public partial class CrosshairOverlay : Window
             OverlayCanvas.Children.Add(path);
         }
 
+        ApplyPositioning(offsetX, offsetY, follow);
+
         if (!IsVisible) Show();
+    }
+
+    private void ApplyPositioning(int offsetX, int offsetY, bool follow)
+    {
+        _offsetX = offsetX;
+        _offsetY = offsetY;
+        _follow  = follow;
+
+        if (follow)
+        {
+            if (!_renderHooked)
+            {
+                CompositionTarget.Rendering += OnRenderFollow;
+                _renderHooked = true;
+            }
+            UpdateFollowPosition();
+        }
+        else
+        {
+            StopFollow();
+            _xform.X = _offsetX;
+            _xform.Y = _offsetY;
+        }
+    }
+
+    private void StopFollow()
+    {
+        if (!_renderHooked) return;
+        CompositionTarget.Rendering -= OnRenderFollow;
+        _renderHooked = false;
+    }
+
+    private void OnRenderFollow(object? sender, EventArgs e) => UpdateFollowPosition();
+
+    private void UpdateFollowPosition()
+    {
+        if (!GetCursorPos(out var p)) return;
+        double localX = p.X / _scaleX - Left;
+        double localY = p.Y / _scaleY - Top;
+        _xform.X = localX - Width  / 2.0 + _offsetX;
+        _xform.Y = localY - Height / 2.0 + _offsetY;
     }
 }
 

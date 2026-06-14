@@ -70,7 +70,7 @@
                                            FontSize="13"
                                            Foreground="#f5f5f5"
                                            VerticalAlignment="Center"/>
-                                <TextBlock Text=" v1.0.5"
+                                <TextBlock Text=" v1.0.6"
                                            FontFamily="{StaticResource IBMPlexMono}"
                                            FontSize="9"
                                            Foreground="#2a2a2a"
@@ -406,6 +406,98 @@
                                                     Style="{StaticResource DarkSlider}"
                                                     Minimum="0" Maximum="20" Value="3"
                                                     ValueChanged="CrGapSlider_Changed"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border BorderBrush="#1e1e1e" BorderThickness="1"
+                                            Background="#0f0f0f" Margin="0,0,0,10">
+                                        <StackPanel Margin="18,16,18,18">
+                                            <TextBlock Text="POSITION"
+                                                       FontFamily="{StaticResource BebasNeue}"
+                                                       FontSize="18"
+                                                       Foreground="#f5f5f5"
+                                                       Margin="0,0,0,4"/>
+                                            <TextBlock Text="Nudge the crosshair off-center, or have it follow your cursor"
+                                                       FontFamily="{StaticResource IBMPlexMono}"
+                                                       FontSize="9" Foreground="#787878"
+                                                       Margin="0,0,0,14"/>
+
+                                            <Border BorderBrush="#1e1e1e" BorderThickness="0,0,0,1"
+                                                    Margin="0,0,0,14" Padding="0,0,0,14">
+                                                <Grid>
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock Text="FOLLOW CURSOR"
+                                                                   FontFamily="{StaticResource IBMPlexMono}"
+                                                                   FontSize="9" FontWeight="Bold"
+                                                                   Foreground="#f5f5f5"/>
+                                                        <TextBlock Text="Replace the cursor with your crosshair — hides the centered one"
+                                                                   FontFamily="{StaticResource IBMPlexMono}"
+                                                                   FontSize="9" Foreground="#787878"
+                                                                   Margin="0,3,0,0"/>
+                                                    </StackPanel>
+                                                    <ToggleButton x:Name="CrFollowToggle"
+                                                                  Style="{StaticResource ToggleSwitch}"
+                                                                  HorizontalAlignment="Right"
+                                                                  VerticalAlignment="Center"
+                                                                  Checked="CrFollowToggle_Changed"
+                                                                  Unchecked="CrFollowToggle_Changed"/>
+                                                </Grid>
+                                            </Border>
+
+                                            <Grid Margin="0,0,0,8">
+                                                <TextBlock Text="OFFSET X"
+                                                           FontFamily="{StaticResource IBMPlexMono}"
+                                                           FontSize="9" Foreground="#787878"
+                                                           VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                    <RepeatButton Content="−"
+                                                                  Style="{StaticResource DarkRepeatBtn}"
+                                                                  Tag="x-"
+                                                                  Click="CrPosNudge_Click"/>
+                                                    <TextBlock x:Name="CrPosXLabel"
+                                                               Text="0"
+                                                               Width="54"
+                                                               TextAlignment="Center"
+                                                               FontFamily="{StaticResource IBMPlexMono}"
+                                                               FontSize="11" FontWeight="Bold"
+                                                               Foreground="#f5f5f5"
+                                                               VerticalAlignment="Center"/>
+                                                    <RepeatButton Content="+"
+                                                                  Style="{StaticResource DarkRepeatBtn}"
+                                                                  Tag="x+"
+                                                                  Click="CrPosNudge_Click"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <Grid Margin="0,0,0,14">
+                                                <TextBlock Text="OFFSET Y"
+                                                           FontFamily="{StaticResource IBMPlexMono}"
+                                                           FontSize="9" Foreground="#787878"
+                                                           VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                    <RepeatButton Content="−"
+                                                                  Style="{StaticResource DarkRepeatBtn}"
+                                                                  Tag="y-"
+                                                                  Click="CrPosNudge_Click"/>
+                                                    <TextBlock x:Name="CrPosYLabel"
+                                                               Text="0"
+                                                               Width="54"
+                                                               TextAlignment="Center"
+                                                               FontFamily="{StaticResource IBMPlexMono}"
+                                                               FontSize="11" FontWeight="Bold"
+                                                               Foreground="#f5f5f5"
+                                                               VerticalAlignment="Center"/>
+                                                    <RepeatButton Content="+"
+                                                                  Style="{StaticResource DarkRepeatBtn}"
+                                                                  Tag="y+"
+                                                                  Click="CrPosNudge_Click"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <Button Content="RESET POSITION"
+                                                    Style="{StaticResource DarkBtn}"
+                                                    HorizontalAlignment="Stretch"
+                                                    Click="CrPosReset_Click"/>
                                         </StackPanel>
                                     </Border>
 

@@ -16,6 +16,9 @@ public class AppState
     public int    CrSize        { get; set; } = 100;
     public int    CrOpacity     { get; set; } = 100;
     public int    CrGap         { get; set; } = 3;
+    public int    CrOffsetX     { get; set; } = 0;
+    public int    CrOffsetY     { get; set; } = 0;
+    public bool   CrFollowCursor { get; set; } = false;
 
     public List<string> CrCustomPixels { get; set; } = new();
     public int CrBuilderSize { get; set; } = 15;

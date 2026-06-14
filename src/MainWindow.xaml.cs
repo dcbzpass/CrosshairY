@@ -501,6 +501,9 @@ public partial class MainWindow : Window
         CrSizeLabel.Text            = $"{_s.CrSize}%";
         CrOpacityLabel.Text         = $"{_s.CrOpacity}%";
         CrGapLabel.Text             = _s.CrGap.ToString();
+        CrFollowToggle.IsChecked    = _s.CrFollowCursor;
+        CrPosXLabel.Text            = _s.CrOffsetX.ToString();
+        CrPosYLabel.Text            = _s.CrOffsetY.ToString();
     }
 
     private UIElement BuildTemplateTile(string id, string name)
@@ -795,9 +798,9 @@ public partial class MainWindow : Window
     private void RefreshCrosshairOverlay()
     {
         if (_s.CrTemplate == "custom")
-            _crOverlay?.UpdateCustomCrosshair(_s.CrCustomPixels, _s.CrSize, _s.CrOpacity, _s.CrBuilderSize);
+            _crOverlay?.UpdateCustomCrosshair(_s.CrCustomPixels, _s.CrSize, _s.CrOpacity, _s.CrBuilderSize, _s.CrOffsetX, _s.CrOffsetY, _s.CrFollowCursor);
         else
-            _crOverlay?.UpdateCrosshair(_s.CrTemplate, _s.CrColor, _s.CrOutline, _s.CrOutlineSize, _s.CrSize, _s.CrOpacity, _s.CrGap);
+            _crOverlay?.UpdateCrosshair(_s.CrTemplate, _s.CrColor, _s.CrOutline, _s.CrOutlineSize, _s.CrSize, _s.CrOpacity, _s.CrGap, _s.CrOffsetX, _s.CrOffsetY, _s.CrFollowCursor);
     }
 
     private void CrToggle_Changed(object s, RoutedEventArgs e)
@@ -834,6 +837,44 @@ public partial class MainWindow : Window
         _s.CrGap = (int)e.NewValue;
         if (CrGapLabel != null) CrGapLabel.Text = _s.CrGap.ToString();
         if (CrTemplatePanel != null) RebuildTemplatePreviews();
+        RefreshCrosshairOverlay();
+    }
+
+    private const int CrOffsetLimit = 5000;
+
+    private void CrPosNudge_Click(object s, RoutedEventArgs e)
+    {
+        if (s is not FrameworkElement fe || fe.Tag is not string tag) return;
+
+        switch (tag)
+        {
+            case "x-": _s.CrOffsetX = Math.Max(-CrOffsetLimit, _s.CrOffsetX - 1); break;
+            case "x+": _s.CrOffsetX = Math.Min( CrOffsetLimit, _s.CrOffsetX + 1); break;
+            case "y-": _s.CrOffsetY = Math.Max(-CrOffsetLimit, _s.CrOffsetY - 1); break;
+            case "y+": _s.CrOffsetY = Math.Min( CrOffsetLimit, _s.CrOffsetY + 1); break;
+        }
+
+        UpdatePositionLabels();
+        RefreshCrosshairOverlay();
+    }
+
+    private void CrPosReset_Click(object s, RoutedEventArgs e)
+    {
+        _s.CrOffsetX = 0;
+        _s.CrOffsetY = 0;
+        UpdatePositionLabels();
+        RefreshCrosshairOverlay();
+    }
+
+    private void UpdatePositionLabels()
+    {
+        if (CrPosXLabel != null) CrPosXLabel.Text = _s.CrOffsetX.ToString();
+        if (CrPosYLabel != null) CrPosYLabel.Text = _s.CrOffsetY.ToString();
+    }
+
+    private void CrFollowToggle_Changed(object s, RoutedEventArgs e)
+    {
+        _s.CrFollowCursor = CrFollowToggle.IsChecked == true;
         RefreshCrosshairOverlay();
     }
 
@@ -1402,6 +1443,9 @@ public partial class MainWindow : Window
             cr_size          = _s.CrSize,
             cr_opacity       = _s.CrOpacity,
             cr_gap           = _s.CrGap,
+            cr_offset_x      = _s.CrOffsetX,
+            cr_offset_y      = _s.CrOffsetY,
+            cr_follow_cursor = _s.CrFollowCursor,
             cr_custom_pixels = _s.CrCustomPixels,
             cr_builder_size  = _s.CrBuilderSize,
             proof_key        = _s.ProofKey,
@@ -1462,6 +1506,10 @@ public partial class MainWindow : Window
             if (r.TryGetProperty("cr_size",         out jv) && jv.TryGetInt32(out i))     _s.CrSize        = i;
             if (r.TryGetProperty("cr_opacity",      out jv) && jv.TryGetInt32(out i))     _s.CrOpacity     = i;
             if (r.TryGetProperty("cr_gap",          out jv) && jv.TryGetInt32(out i))     _s.CrGap         = i;
+            if (r.TryGetProperty("cr_offset_x",     out jv) && jv.TryGetInt32(out i))     _s.CrOffsetX     = Math.Clamp(i, -CrOffsetLimit, CrOffsetLimit);
+            if (r.TryGetProperty("cr_offset_y",     out jv) && jv.TryGetInt32(out i))     _s.CrOffsetY     = Math.Clamp(i, -CrOffsetLimit, CrOffsetLimit);
+            if (r.TryGetProperty("cr_follow_cursor", out jv) && jv.ValueKind == JsonValueKind.True)  _s.CrFollowCursor = true;
+            if (r.TryGetProperty("cr_follow_cursor", out jv) && jv.ValueKind == JsonValueKind.False) _s.CrFollowCursor = false;
 
             if (r.TryGetProp("proof_key", out v) && !string.IsNullOrEmpty(v))
             {
