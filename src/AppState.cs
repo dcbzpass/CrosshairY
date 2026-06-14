@@ -4,8 +4,11 @@ public class AppState
 {
     public string ProofKey  { get; set; } = "h";
     public string CycleKey  { get; set; } = "";
+    public string ToggleKey { get; set; } = "";
+    public string FollowKey { get; set; } = "";
 
-    public bool UpdateNotifications { get; set; } = true;
+    public bool   UpdateNotifications { get; set; } = true;
+    public string LastUpdateCheck     { get; set; } = "";
 
     public bool CaptureHidden { get; set; } = false;
 

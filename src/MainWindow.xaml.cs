@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     public const string Version = "1.0.6";
     private string? _updateExeUrl;
     private string? _updateHtmlUrl;
+    private long    _updateExeSize;
     private bool    _updateBusy;
 
     private string   _builderColor    = "#ffffff";
@@ -426,7 +427,10 @@ public partial class MainWindow : Window
     {
         ProofKeyBtn.Content  = DisplayKey(_s.ProofKey);
         CycleKeyBtn.Content  = string.IsNullOrEmpty(_s.CycleKey) ? "NONE" : DisplayKey(_s.CycleKey);
+        ToggleKeyBtn.Content = string.IsNullOrEmpty(_s.ToggleKey) ? "NONE" : DisplayKey(_s.ToggleKey);
+        FollowKeyBtn.Content = string.IsNullOrEmpty(_s.FollowKey) ? "NONE" : DisplayKey(_s.FollowKey);
         UpdateNotifyToggle.IsChecked = _s.UpdateNotifications;
+        UpdateLastCheckedLabel();
         BuildMonitorButtons();
     }
 
@@ -805,6 +809,12 @@ public partial class MainWindow : Window
 
     private void RefreshCrosshairOverlay()
     {
+        if (!_crosshairOn)
+        {
+            _crOverlay?.Conceal();
+            return;
+        }
+
         if (_s.CrTemplate == "custom")
             _crOverlay?.UpdateCustomCrosshair(_s.CrCustomPixels, _s.CrSize, _s.CrOpacity, _s.CrBuilderSize, _s.CrOffsetX, _s.CrOffsetY, _s.CrFollowCursor);
         else
@@ -917,17 +927,58 @@ public partial class MainWindow : Window
         if (!_s.UpdateNotifications) HideUpdateToast();
     }
 
-    private async System.Threading.Tasks.Task CheckForUpdatesAsync()
+    private async System.Threading.Tasks.Task CheckForUpdatesAsync(bool manual = false)
     {
-        if (!_s.UpdateNotifications) return;
+        if (!manual && !_s.UpdateNotifications) return;
+
+        if (manual)
+        {
+            UpdateCheckNowBtn.IsEnabled = false;
+            UpdateCheckNowBtn.Content   = "CHECKING…";
+        }
 
         var rel = await Updater.GetLatestAsync();
-        if (rel == null || !Updater.IsNewer(Version, rel.Tag)) return;
-        if (!_s.UpdateNotifications) return;
 
-        _updateExeUrl  = rel.ExeUrl;
-        _updateHtmlUrl = rel.HtmlUrl;
-        ShowUpdateToast(rel.Tag);
+        _s.LastUpdateCheck = DateTime.Now.ToString("o");
+        SaveSettings();
+        UpdateLastCheckedLabel();
+
+        if (manual)
+        {
+            UpdateCheckNowBtn.IsEnabled = true;
+            UpdateCheckNowBtn.Content   = "CHECK NOW";
+        }
+
+        if (rel == null)
+        {
+            if (manual && UpdateCheckStatus != null) UpdateCheckStatus.Text = "Check failed — try again later";
+            return;
+        }
+
+        if (Updater.IsNewer(Version, rel.Tag))
+        {
+            _updateExeUrl  = rel.ExeUrl;
+            _updateHtmlUrl = rel.HtmlUrl;
+            _updateExeSize = rel.ExeSize;
+            ShowUpdateToast(rel.Tag);
+        }
+        else if (manual && UpdateCheckStatus != null)
+        {
+            UpdateCheckStatus.Text = $"You're on the latest version (v{Version})";
+        }
+    }
+
+    private async void UpdateCheckNow_Click(object s, RoutedEventArgs e) => await CheckForUpdatesAsync(manual: true);
+
+    private void UpdateLastCheckedLabel()
+    {
+        if (UpdateCheckStatus == null) return;
+
+        if (!string.IsNullOrEmpty(_s.LastUpdateCheck)
+            && DateTime.TryParse(_s.LastUpdateCheck, null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt))
+            UpdateCheckStatus.Text = $"Last checked: {dt.ToLocalTime():yyyy-MM-dd HH:mm}";
+        else
+            UpdateCheckStatus.Text = "Last checked: never";
     }
 
     private void ShowUpdateToast(string tag)
@@ -974,7 +1025,7 @@ public partial class MainWindow : Window
         UpdateDismissBtn.IsEnabled  = false;
         UpdateDownloadBtn.Content   = "DOWNLOADING…";
 
-        var path = await Updater.DownloadAsync(_updateExeUrl);
+        var path = await Updater.DownloadAsync(_updateExeUrl, _updateExeSize);
 
         if (path != null && Updater.LaunchSwapAndExit(path))
         {
@@ -1333,8 +1384,10 @@ public partial class MainWindow : Window
         _bindingBtn      = null;
     }
 
-    private void ProofKeyBtn_Click(object s, RoutedEventArgs e) => StartBinding(ProofKeyBtn, k => { _s.ProofKey = k; SaveSettings(); });
-    private void CycleKeyBtn_Click(object s, RoutedEventArgs e) => StartBinding(CycleKeyBtn, k => { _s.CycleKey = k; SaveSettings(); });
+    private void ProofKeyBtn_Click(object s, RoutedEventArgs e)  => StartBinding(ProofKeyBtn,  k => { _s.ProofKey  = k; SaveSettings(); });
+    private void CycleKeyBtn_Click(object s, RoutedEventArgs e)  => StartBinding(CycleKeyBtn,  k => { _s.CycleKey  = k; SaveSettings(); });
+    private void ToggleKeyBtn_Click(object s, RoutedEventArgs e) => StartBinding(ToggleKeyBtn, k => { _s.ToggleKey = k; SaveSettings(); });
+    private void FollowKeyBtn_Click(object s, RoutedEventArgs e) => StartBinding(FollowKeyBtn, k => { _s.FollowKey = k; SaveSettings(); });
 
     private void OnGlobalKeyDown(string key)
     {
@@ -1349,6 +1402,25 @@ public partial class MainWindow : Window
 
         if (!string.IsNullOrEmpty(_s.CycleKey) && key == _s.CycleKey)
             Dispatcher.Invoke(CycleProfile);
+
+        if (!string.IsNullOrEmpty(_s.ToggleKey) && key == _s.ToggleKey)
+            Dispatcher.Invoke(ToggleCrosshairOn);
+
+        if (!string.IsNullOrEmpty(_s.FollowKey) && key == _s.FollowKey)
+            Dispatcher.Invoke(ToggleFollowViaHotkey);
+    }
+
+    private bool _crosshairOn = true;
+
+    private void ToggleCrosshairOn()
+    {
+        _crosshairOn = !_crosshairOn;
+        RefreshCrosshairOverlay();
+    }
+
+    private void ToggleFollowViaHotkey()
+    {
+        CrFollowToggle.IsChecked = !(CrFollowToggle.IsChecked == true);
     }
 
     private void CycleProfile()
@@ -1422,31 +1494,44 @@ public partial class MainWindow : Window
                 VerticalAlignment = System.Windows.VerticalAlignment.Center
             };
 
-            var loadBtn = new Button { Content = "LOAD", Style = (Style)FindResource("DarkBtn"), Width = 60, Tag = path };
+            nameBlock.Margin = new Thickness(10, 0, 6, 0);
+
+            var thumb = BuildProfileThumb(path);
+
+            var loadBtn = new Button { Content = "LOAD", Style = (Style)FindResource("DarkBtn"), Width = 52, Tag = path };
             loadBtn.Click += (_, _) => { LoadProfile(path); LoadProfileList(); };
 
-            var saveBtn = new Button { Content = "SAVE", Style = (Style)FindResource("DarkBtn"), Width = 60, Margin = new Thickness(6, 0, 0, 0), Tag = path };
+            var saveBtn = new Button { Content = "SAVE", Style = (Style)FindResource("DarkBtn"), Width = 52, Margin = new Thickness(6, 0, 0, 0), Tag = path };
             saveBtn.Click += (_, _) =>
             {
                 File.WriteAllText(path, BuildProfileJson(), System.Text.Encoding.UTF8);
                 LoadProfileList();
             };
 
-            var deleteBtn = new Button { Content = "DEL", Style = (Style)FindResource("DarkBtn"), Width = 48, Margin = new Thickness(6, 0, 0, 0), Tag = path };
+            var dupBtn = new Button { Content = "DUP", Style = (Style)FindResource("DarkBtn"), Width = 46, Margin = new Thickness(6, 0, 0, 0), Tag = path };
+            dupBtn.Click += (_, _) => DuplicateProfile(path);
+
+            var deleteBtn = new Button { Content = "DEL", Style = (Style)FindResource("DarkBtn"), Width = 44, Margin = new Thickness(6, 0, 0, 0), Tag = path };
             deleteBtn.Click += (_, _) => { try { File.Delete(path); } catch { } LoadProfileList(); };
 
             var row = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            Grid.SetColumn(nameBlock, 0);
-            Grid.SetColumn(loadBtn,   1);
-            Grid.SetColumn(saveBtn,   2);
-            Grid.SetColumn(deleteBtn, 3);
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Grid.SetColumn(thumb,     0);
+            Grid.SetColumn(nameBlock, 1);
+            Grid.SetColumn(loadBtn,   2);
+            Grid.SetColumn(saveBtn,   3);
+            Grid.SetColumn(dupBtn,    4);
+            Grid.SetColumn(deleteBtn, 5);
+            row.Children.Add(thumb);
             row.Children.Add(nameBlock);
             row.Children.Add(loadBtn);
             row.Children.Add(saveBtn);
+            row.Children.Add(dupBtn);
             row.Children.Add(deleteBtn);
 
             ProfileListPanel.Children.Add(new Border
@@ -1459,6 +1544,99 @@ public partial class MainWindow : Window
                 Child           = row
             });
         }
+    }
+
+    private UIElement BuildProfileThumb(string path)
+    {
+        string template = "", color = "#ffffff";
+        bool   outline = false;
+        int    outlineSize = 1, gap = 3, builderSize = 15;
+        var    pixels = new List<string>();
+
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            var r = doc.RootElement;
+            if (r.TryGetProp("cr_template", out var v)) template = v;
+            if (r.TryGetProp("cr_color",    out v))     color    = v;
+            if (r.TryGetProperty("cr_outline",      out var jv) && jv.ValueKind == JsonValueKind.True) outline = true;
+            if (r.TryGetProperty("cr_outline_size", out jv) && jv.TryGetInt32(out var i)) outlineSize = i;
+            if (r.TryGetProperty("cr_gap",          out jv) && jv.TryGetInt32(out i))     gap         = i;
+            if (r.TryGetProperty("cr_builder_size", out jv) && jv.TryGetInt32(out i))     builderSize = i <= 15 ? 15 : i <= 30 ? 30 : 60;
+            if (r.TryGetProperty("cr_custom_pixels", out jv) && jv.ValueKind == JsonValueKind.Array)
+                foreach (var el in jv.EnumerateArray())
+                    if (el.GetString() is { } px) pixels.Add(px);
+        }
+        catch { }
+
+        var canvas = new Canvas
+        {
+            Width      = 42,
+            Height     = 42,
+            Background = new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x14))
+        };
+
+        if (template == "custom")
+            DrawThumbCustom(canvas, pixels, builderSize);
+        else if (!string.IsNullOrEmpty(template))
+            CrDraw.Draw(canvas, 21, 21, 0.34, color, outline, outlineSize, template, gap);
+
+        return new Border
+        {
+            Width           = 42,
+            Height          = 42,
+            BorderBrush     = new SolidColorBrush(Color.FromRgb(0x1e, 0x1e, 0x1e)),
+            BorderThickness = new Thickness(1),
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            Child           = canvas
+        };
+    }
+
+    private static void DrawThumbCustom(Canvas canvas, List<string> pixels, int gridSize)
+    {
+        if (pixels.Count == 0 || gridSize <= 0) return;
+
+        double field = 38.0;
+        double cell  = field / gridSize;
+        double ox    = (42 - field) / 2.0;
+        double oy    = (42 - field) / 2.0;
+
+        foreach (var entry in pixels)
+        {
+            var parts = entry.Split(',');
+            if (parts.Length < 3) continue;
+            if (!int.TryParse(parts[0], out int row) || !int.TryParse(parts[1], out int col)) continue;
+            if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) continue;
+
+            Color c;
+            try   { c = (Color)ColorConverter.ConvertFromString(parts[2]); }
+            catch { c = Colors.White; }
+
+            var rect = new Rectangle { Width = cell, Height = cell, Fill = new SolidColorBrush(c) };
+            RenderOptions.SetEdgeMode(rect, EdgeMode.Aliased);
+            Canvas.SetLeft(rect, ox + col * cell);
+            Canvas.SetTop(rect,  oy + row * cell);
+            canvas.Children.Add(rect);
+        }
+    }
+
+    private void DuplicateProfile(string path)
+    {
+        try
+        {
+            var dir      = Path.GetDirectoryName(path) ?? ProfilesDir;
+            var baseName = Path.GetFileNameWithoutExtension(path);
+
+            string candidate;
+            int n = 2;
+            do { candidate = Path.Combine(dir, $"{baseName} ({n}).json"); n++; }
+            while (File.Exists(candidate));
+
+            File.Copy(path, candidate);
+        }
+        catch { }
+
+        LoadProfileList();
     }
 
     private void SaveProfile_Click(object s, RoutedEventArgs e)
@@ -1582,7 +1760,16 @@ public partial class MainWindow : Window
         try
         {
             Directory.CreateDirectory(AppDir);
-            var cfg = new { proof_key = _s.ProofKey, cycle_key = _s.CycleKey, monitor_index = _s.MonitorIndex, update_notifications = _s.UpdateNotifications };
+            var cfg = new
+            {
+                proof_key            = _s.ProofKey,
+                cycle_key            = _s.CycleKey,
+                toggle_key           = _s.ToggleKey,
+                follow_key           = _s.FollowKey,
+                monitor_index        = _s.MonitorIndex,
+                update_notifications = _s.UpdateNotifications,
+                last_update_check    = _s.LastUpdateCheck
+            };
             File.WriteAllText(SettingsFile, JsonSerializer.Serialize(cfg));
         }
         catch { }
@@ -1597,9 +1784,16 @@ public partial class MainWindow : Window
             var r = doc.RootElement;
             if (r.TryGetProp("proof_key", out var v) && !string.IsNullOrEmpty(v)) _s.ProofKey = v;
             if (r.TryGetProp("cycle_key", out v))                                  _s.CycleKey = v;
+            if (r.TryGetProp("toggle_key", out v))                                 _s.ToggleKey = v;
+            if (r.TryGetProp("follow_key", out v))                                 _s.FollowKey = v;
             if (r.TryGetProperty("monitor_index", out var mi) && mi.TryGetInt32(out var midx)) _s.MonitorIndex = midx;
             if (r.TryGetProperty("update_notifications", out var un) && un.ValueKind == JsonValueKind.False) _s.UpdateNotifications = false;
+            if (r.TryGetProp("last_update_check", out v)) _s.LastUpdateCheck = v;
+
             if (UpdateNotifyToggle != null) UpdateNotifyToggle.IsChecked = _s.UpdateNotifications;
+            if (ToggleKeyBtn != null) ToggleKeyBtn.Content = string.IsNullOrEmpty(_s.ToggleKey) ? "NONE" : DisplayKey(_s.ToggleKey);
+            if (FollowKeyBtn != null) FollowKeyBtn.Content = string.IsNullOrEmpty(_s.FollowKey) ? "NONE" : DisplayKey(_s.FollowKey);
+            UpdateLastCheckedLabel();
         }
         catch { }
     }

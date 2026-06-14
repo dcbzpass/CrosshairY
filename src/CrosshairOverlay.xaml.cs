@@ -102,6 +102,12 @@ public partial class CrosshairOverlay : Window
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     }
 
+    public void Conceal()
+    {
+        CursorReplacer.Restore();
+        if (IsVisible) Hide();
+    }
+
     public void SetProof(bool active)
     {
         var hwnd = new WindowInteropHelper(this).Handle;

@@ -11,7 +11,7 @@ internal static class Updater
     private const string Owner = "dcbzpass";
     private const string Repo  = "CrosshairY";
 
-    public sealed record Release(string Tag, string ExeUrl, string HtmlUrl);
+    public sealed record Release(string Tag, string ExeUrl, long ExeSize, string HtmlUrl);
 
     private static HttpClient CreateClient()
     {
@@ -35,7 +35,8 @@ internal static class Updater
             var tag  = tagEl.GetString() ?? "";
             var html = root.TryGetProperty("html_url", out var h) ? h.GetString() ?? "" : "";
 
-            var exeUrl = "";
+            var  exeUrl  = "";
+            long exeSize = 0;
             if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
             {
                 foreach (var a in assets.EnumerateArray())
@@ -45,12 +46,13 @@ internal static class Updater
 
                     if (a.TryGetProperty("browser_download_url", out var u))
                         exeUrl = u.GetString() ?? "";
+                    exeSize = a.TryGetProperty("size", out var sz) && sz.TryGetInt64(out var s) ? s : 0;
 
                     if (string.Equals(name, "CrosshairY.exe", StringComparison.OrdinalIgnoreCase)) break;
                 }
             }
 
-            return new Release(tag, exeUrl, html);
+            return new Release(tag, exeUrl, exeSize, html);
         }
         catch
         {
@@ -66,7 +68,7 @@ internal static class Updater
             && tv > cv;
     }
 
-    public static async Task<string?> DownloadAsync(string url)
+    public static async Task<string?> DownloadAsync(string url, long expectedSize)
     {
         try
         {
@@ -79,6 +81,7 @@ internal static class Updater
 
             var bytes = await http.GetByteArrayAsync(url);
             if (bytes.Length == 0) return null;
+            if (expectedSize > 0 && bytes.Length != expectedSize) return null;
 
             await File.WriteAllBytesAsync(path, bytes);
             return path;

@@ -812,6 +812,32 @@
                                                     HorizontalAlignment="Stretch"
                                                     Click="CycleKeyBtn_Click"/>
 
+                                            <TextBlock Text="TOGGLE OVERLAY KEY"
+                                                       FontFamily="{StaticResource IBMPlexMono}"
+                                                       FontSize="9" Foreground="#787878"
+                                                       Margin="0,14,0,0"/>
+                                            <TextBlock Text="Show or hide the crosshair instantly"
+                                                       FontFamily="{StaticResource IBMPlexMono}"
+                                                       FontSize="9" Foreground="#787878"
+                                                       Margin="0,3,0,8"/>
+                                            <Button x:Name="ToggleKeyBtn"
+                                                    Style="{StaticResource DarkBtn}"
+                                                    HorizontalAlignment="Stretch"
+                                                    Click="ToggleKeyBtn_Click"/>
+
+                                            <TextBlock Text="TOGGLE FOLLOW KEY"
+                                                       FontFamily="{StaticResource IBMPlexMono}"
+                                                       FontSize="9" Foreground="#787878"
+                                                       Margin="0,14,0,0"/>
+                                            <TextBlock Text="Switch cursor-follow mode on or off without opening the UI"
+                                                       FontFamily="{StaticResource IBMPlexMono}"
+                                                       FontSize="9" Foreground="#787878"
+                                                       Margin="0,3,0,8"/>
+                                            <Button x:Name="FollowKeyBtn"
+                                                    Style="{StaticResource DarkBtn}"
+                                                    HorizontalAlignment="Stretch"
+                                                    Click="FollowKeyBtn_Click"/>
+
                                             <Border BorderBrush="#1e1e1e" BorderThickness="0,1,0,0"
                                                     Margin="0,16,0,0" Padding="0,14,0,0">
                                                 <Grid>
@@ -833,6 +859,20 @@
                                                                   Unchecked="UpdateNotifyToggle_Changed"/>
                                                 </Grid>
                                             </Border>
+
+                                            <Grid Margin="0,12,0,0">
+                                                <TextBlock x:Name="UpdateCheckStatus"
+                                                           Text="Last checked: never"
+                                                           FontFamily="{StaticResource IBMPlexMono}"
+                                                           FontSize="9" Foreground="#787878"
+                                                           VerticalAlignment="Center"/>
+                                                <Button x:Name="UpdateCheckNowBtn"
+                                                        Content="CHECK NOW"
+                                                        Style="{StaticResource DarkBtn}"
+                                                        HorizontalAlignment="Right"
+                                                        Width="100"
+                                                        Click="UpdateCheckNow_Click"/>
+                                            </Grid>
                                         </StackPanel>
                                     </Border>
 

@@ -69,6 +69,12 @@ internal static class CursorReplacer
         _active = false;
     }
 
+    public static void ForceRestore()
+    {
+        SystemParametersInfo(SPI_SETCURSORS, 0, IntPtr.Zero, SPIF_SENDCHANGE);
+        _active = false;
+    }
+
     private static IntPtr BuildCursor(System.Drawing.Bitmap bmp, int hotX, int hotY)
     {
         IntPtr tmpIcon = bmp.GetHicon();

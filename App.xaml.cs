@@ -11,6 +11,8 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        CursorReplacer.ForceRestore();
+
         DispatcherUnhandledException += (_, args) =>
         {
             CursorReplacer.Restore();
