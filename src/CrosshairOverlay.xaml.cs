@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
 namespace CrosshairY;
@@ -24,12 +25,6 @@ public partial class CrosshairOverlay : Window
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
         int X, int Y, int cx, int cy, uint uFlags);
-
-    [DllImport("user32.dll")]
-    private static extern bool GetCursorPos(out POINT lpPoint);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct POINT { public int X; public int Y; }
 
     private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd,
         int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
@@ -60,13 +55,8 @@ public partial class CrosshairOverlay : Window
     private WinEventDelegate? _winEventProc;
     private IntPtr _winEventHook;
 
+    private const int CursorSize = 256;
     private readonly TranslateTransform _xform = new();
-    private double _offsetX;
-    private double _offsetY;
-    private bool   _follow;
-    private bool   _renderHooked;
-    private double _scaleX = 1.0;
-    private double _scaleY = 1.0;
 
     public CrosshairOverlay()
     {
@@ -100,7 +90,7 @@ public partial class CrosshairOverlay : Window
 
         Closed += (_, _) =>
         {
-            StopFollow();
+            CursorReplacer.Restore();
             if (_winEventHook != IntPtr.Zero) UnhookWinEvent(_winEventHook);
         };
     }
@@ -128,9 +118,6 @@ public partial class CrosshairOverlay : Window
         if (scaleX <= 0) scaleX = 1;
         if (scaleY <= 0) scaleY = 1;
 
-        _scaleX = scaleX;
-        _scaleY = scaleY;
-
         Left   = b.Left   / scaleX;
         Top    = b.Top    / scaleY;
         Width  = b.Width  / scaleX;
@@ -141,37 +128,70 @@ public partial class CrosshairOverlay : Window
     {
         if (string.IsNullOrEmpty(template))
         {
-            StopFollow();
+            CursorReplacer.Restore();
             if (IsVisible) Hide();
             return;
         }
+
+        if (follow)
+        {
+            var bmp = RenderCursorBitmap(
+                c => CrDraw.Draw(c, CursorSize / 2.0, CursorSize / 2.0, size / 100.0, color, outline, outlineSize, template, gap),
+                opacity);
+            ApplyCursor(bmp, offsetX, offsetY);
+            if (IsVisible) Hide();
+            return;
+        }
+
+        CursorReplacer.Restore();
 
         double cx = Width  / 2.0;
         double cy = Height / 2.0;
         OverlayCanvas.Opacity = opacity / 100.0;
         CrDraw.Draw(OverlayCanvas, cx, cy, size / 100.0, color, outline, outlineSize, template, gap);
 
-        ApplyPositioning(offsetX, offsetY, follow);
+        _xform.X = offsetX;
+        _xform.Y = offsetY;
 
         if (!IsVisible) Show();
     }
 
     public void UpdateCustomCrosshair(List<string> pixels, int size, int opacity, int gridSize, int offsetX, int offsetY, bool follow)
     {
-        OverlayCanvas.Children.Clear();
-
         if (pixels.Count == 0 || gridSize <= 0)
         {
-            StopFollow();
+            CursorReplacer.Restore();
+            OverlayCanvas.Children.Clear();
             if (IsVisible) Hide();
             return;
         }
 
-        OverlayCanvas.Opacity = opacity / 100.0;
+        if (follow)
+        {
+            var bmp = RenderCursorBitmap(
+                c => DrawCustomInto(c, pixels, gridSize, size / 100.0, CursorSize / 2.0, CursorSize / 2.0),
+                opacity);
+            ApplyCursor(bmp, offsetX, offsetY);
+            OverlayCanvas.Children.Clear();
+            if (IsVisible) Hide();
+            return;
+        }
 
-        double cx    = Width  / 2.0;
-        double cy    = Height / 2.0;
-        double field = 60.0 * (size / 100.0);
+        CursorReplacer.Restore();
+
+        OverlayCanvas.Children.Clear();
+        OverlayCanvas.Opacity = opacity / 100.0;
+        DrawCustomInto(OverlayCanvas, pixels, gridSize, size / 100.0, Width / 2.0, Height / 2.0);
+
+        _xform.X = offsetX;
+        _xform.Y = offsetY;
+
+        if (!IsVisible) Show();
+    }
+
+    private static void DrawCustomInto(Canvas canvas, List<string> pixels, int gridSize, double scale, double cx, double cy)
+    {
+        double field = 60.0 * scale;
         double cell  = field / gridSize;
         double ox    = cx - field / 2.0;
         double oy    = cy - field / 2.0;
@@ -204,53 +224,43 @@ public partial class CrosshairOverlay : Window
             group.Freeze();
             var path = new Path { Data = group, Fill = new SolidColorBrush(color), SnapsToDevicePixels = true };
             RenderOptions.SetEdgeMode(path, EdgeMode.Aliased);
-            OverlayCanvas.Children.Add(path);
-        }
-
-        ApplyPositioning(offsetX, offsetY, follow);
-
-        if (!IsVisible) Show();
-    }
-
-    private void ApplyPositioning(int offsetX, int offsetY, bool follow)
-    {
-        _offsetX = offsetX;
-        _offsetY = offsetY;
-        _follow  = follow;
-
-        if (follow)
-        {
-            if (!_renderHooked)
-            {
-                CompositionTarget.Rendering += OnRenderFollow;
-                _renderHooked = true;
-            }
-            UpdateFollowPosition();
-        }
-        else
-        {
-            StopFollow();
-            _xform.X = _offsetX;
-            _xform.Y = _offsetY;
+            canvas.Children.Add(path);
         }
     }
 
-    private void StopFollow()
+    private static System.Drawing.Bitmap RenderCursorBitmap(Action<Canvas> draw, int opacity)
     {
-        if (!_renderHooked) return;
-        CompositionTarget.Rendering -= OnRenderFollow;
-        _renderHooked = false;
+        int n = CursorSize;
+
+        var inner = new Canvas { Width = n, Height = n, Opacity = System.Math.Clamp(opacity / 100.0, 0.0, 1.0) };
+        draw(inner);
+
+        var host = new Canvas { Width = n, Height = n };
+        host.Children.Add(inner);
+        host.Measure(new System.Windows.Size(n, n));
+        host.Arrange(new Rect(0, 0, n, n));
+        host.UpdateLayout();
+
+        var rtb = new RenderTargetBitmap(n, n, 96, 96, PixelFormats.Pbgra32);
+        rtb.Render(host);
+
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(rtb));
+
+        using var ms = new System.IO.MemoryStream();
+        encoder.Save(ms);
+        ms.Position = 0;
+        return new System.Drawing.Bitmap(ms);
     }
 
-    private void OnRenderFollow(object? sender, EventArgs e) => UpdateFollowPosition();
-
-    private void UpdateFollowPosition()
+    private static void ApplyCursor(System.Drawing.Bitmap bmp, int offsetX, int offsetY)
     {
-        if (!GetCursorPos(out var p)) return;
-        double localX = p.X / _scaleX - Left;
-        double localY = p.Y / _scaleY - Top;
-        _xform.X = localX - Width  / 2.0 + _offsetX;
-        _xform.Y = localY - Height / 2.0 + _offsetY;
+        int n    = CursorSize;
+        int hotX = System.Math.Clamp(n / 2 - offsetX, 0, n - 1);
+        int hotY = System.Math.Clamp(n / 2 - offsetY, 0, n - 1);
+
+        CursorReplacer.Apply(bmp, hotX, hotY);
+        bmp.Dispose();
     }
 }
 

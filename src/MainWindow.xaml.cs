@@ -502,8 +502,8 @@ public partial class MainWindow : Window
         CrOpacityLabel.Text         = $"{_s.CrOpacity}%";
         CrGapLabel.Text             = _s.CrGap.ToString();
         CrFollowToggle.IsChecked    = _s.CrFollowCursor;
-        CrPosXLabel.Text            = _s.CrOffsetX.ToString();
-        CrPosYLabel.Text            = _s.CrOffsetY.ToString();
+        CrPosXBox.Text              = _s.CrOffsetX.ToString();
+        CrPosYBox.Text              = _s.CrOffsetY.ToString();
     }
 
     private UIElement BuildTemplateTile(string id, string name)
@@ -840,7 +840,8 @@ public partial class MainWindow : Window
         RefreshCrosshairOverlay();
     }
 
-    private const int CrOffsetLimit = 5000;
+    private int MaxOffsetX => (int)Math.Round((_crOverlay?.Width  ?? SystemParameters.PrimaryScreenWidth)  / 2.0);
+    private int MaxOffsetY => (int)Math.Round((_crOverlay?.Height ?? SystemParameters.PrimaryScreenHeight) / 2.0);
 
     private void CrPosNudge_Click(object s, RoutedEventArgs e)
     {
@@ -848,10 +849,10 @@ public partial class MainWindow : Window
 
         switch (tag)
         {
-            case "x-": _s.CrOffsetX = Math.Max(-CrOffsetLimit, _s.CrOffsetX - 1); break;
-            case "x+": _s.CrOffsetX = Math.Min( CrOffsetLimit, _s.CrOffsetX + 1); break;
-            case "y-": _s.CrOffsetY = Math.Max(-CrOffsetLimit, _s.CrOffsetY - 1); break;
-            case "y+": _s.CrOffsetY = Math.Min( CrOffsetLimit, _s.CrOffsetY + 1); break;
+            case "x-": _s.CrOffsetX = Math.Max(-MaxOffsetX, _s.CrOffsetX - 1); break;
+            case "x+": _s.CrOffsetX = Math.Min( MaxOffsetX, _s.CrOffsetX + 1); break;
+            case "y-": _s.CrOffsetY = Math.Max(-MaxOffsetY, _s.CrOffsetY - 1); break;
+            case "y+": _s.CrOffsetY = Math.Min( MaxOffsetY, _s.CrOffsetY + 1); break;
         }
 
         UpdatePositionLabels();
@@ -866,10 +867,33 @@ public partial class MainWindow : Window
         RefreshCrosshairOverlay();
     }
 
+    private void CrPosBox_Commit(object s, RoutedEventArgs e)
+    {
+        if (s is not System.Windows.Controls.TextBox tb) return;
+        bool isX = (tb.Tag as string) == "x";
+
+        if (int.TryParse(tb.Text.Trim(), out int val))
+        {
+            if (isX) _s.CrOffsetX = Math.Clamp(val, -MaxOffsetX, MaxOffsetX);
+            else     _s.CrOffsetY = Math.Clamp(val, -MaxOffsetY, MaxOffsetY);
+        }
+
+        UpdatePositionLabels();
+        RefreshCrosshairOverlay();
+    }
+
+    private void CrPosBox_KeyDown(object s, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || s is not System.Windows.Controls.TextBox tb) return;
+        CrPosBox_Commit(tb, e);
+        Keyboard.ClearFocus();
+        e.Handled = true;
+    }
+
     private void UpdatePositionLabels()
     {
-        if (CrPosXLabel != null) CrPosXLabel.Text = _s.CrOffsetX.ToString();
-        if (CrPosYLabel != null) CrPosYLabel.Text = _s.CrOffsetY.ToString();
+        if (CrPosXBox != null) CrPosXBox.Text = _s.CrOffsetX.ToString();
+        if (CrPosYBox != null) CrPosYBox.Text = _s.CrOffsetY.ToString();
     }
 
     private void CrFollowToggle_Changed(object s, RoutedEventArgs e)
@@ -1506,8 +1530,8 @@ public partial class MainWindow : Window
             if (r.TryGetProperty("cr_size",         out jv) && jv.TryGetInt32(out i))     _s.CrSize        = i;
             if (r.TryGetProperty("cr_opacity",      out jv) && jv.TryGetInt32(out i))     _s.CrOpacity     = i;
             if (r.TryGetProperty("cr_gap",          out jv) && jv.TryGetInt32(out i))     _s.CrGap         = i;
-            if (r.TryGetProperty("cr_offset_x",     out jv) && jv.TryGetInt32(out i))     _s.CrOffsetX     = Math.Clamp(i, -CrOffsetLimit, CrOffsetLimit);
-            if (r.TryGetProperty("cr_offset_y",     out jv) && jv.TryGetInt32(out i))     _s.CrOffsetY     = Math.Clamp(i, -CrOffsetLimit, CrOffsetLimit);
+            if (r.TryGetProperty("cr_offset_x",     out jv) && jv.TryGetInt32(out i))     _s.CrOffsetX     = Math.Clamp(i, -MaxOffsetX, MaxOffsetX);
+            if (r.TryGetProperty("cr_offset_y",     out jv) && jv.TryGetInt32(out i))     _s.CrOffsetY     = Math.Clamp(i, -MaxOffsetY, MaxOffsetY);
             if (r.TryGetProperty("cr_follow_cursor", out jv) && jv.ValueKind == JsonValueKind.True)  _s.CrFollowCursor = true;
             if (r.TryGetProperty("cr_follow_cursor", out jv) && jv.ValueKind == JsonValueKind.False) _s.CrFollowCursor = false;
 

@@ -13,6 +13,7 @@ public partial class App : System.Windows.Application
     {
         DispatcherUnhandledException += (_, args) =>
         {
+            CursorReplacer.Restore();
             System.Windows.MessageBox.Show(
                 $"Unhandled exception:\n\n{args.Exception}",
                 "CrosshairY - Error",
@@ -24,12 +25,15 @@ public partial class App : System.Windows.Application
 
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
         {
+            CursorReplacer.Restore();
             System.Windows.MessageBox.Show(
                 $"Fatal exception:\n\n{args.ExceptionObject}",
                 "CrosshairY - Fatal Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         };
+
+        ProcessExit_Hook();
 
         base.OnStartup(e);
 
@@ -137,8 +141,14 @@ public partial class App : System.Windows.Application
         win.Activate();
     }
 
+    private static void ProcessExit_Hook()
+    {
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => CursorReplacer.Restore();
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
+        CursorReplacer.Restore();
         if (_tray != null)
         {
             _tray.Visible = false;
