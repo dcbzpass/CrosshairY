@@ -518,7 +518,7 @@ public partial class MainWindow : Window
             Text                = name,
             FontFamily          = (FontFamily)FindResource("IBMPlexMono"),
             FontSize            = 8,
-            Foreground          = new SolidColorBrush(Color.FromRgb(0x5a, 0x5a, 0x5a)),
+            Foreground          = new SolidColorBrush(Color.FromRgb(0x78, 0x78, 0x78)),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
             Margin              = new Thickness(0, 4, 0, 0)
         };
@@ -680,7 +680,7 @@ public partial class MainWindow : Window
             Text                = t.name,
             FontFamily          = (FontFamily)FindResource("IBMPlexMono"),
             FontSize            = 8,
-            Foreground          = new SolidColorBrush(Color.FromRgb(0x5a, 0x5a, 0x5a)),
+            Foreground          = new SolidColorBrush(Color.FromRgb(0x78, 0x78, 0x78)),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
             Margin              = new Thickness(0, 4, 0, 0),
             MaxWidth            = 70,
@@ -1088,8 +1088,13 @@ public partial class MainWindow : Window
             offBrush.BeginAnimation(SolidColorBrush.ColorProperty,
                 new ColorAnimation(Color.FromRgb(0x14, 0x14, 0x14), Colors.Transparent, new Duration(TimeSpan.FromMilliseconds(200)))
                 { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            _activeNavBtn.Foreground      = new SolidColorBrush(Color.FromRgb(0x78, 0x78, 0x78));
+            _activeNavBtn.BorderThickness = new Thickness(0);
         }
-        activate.Background = new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x14));
+        activate.Background      = new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x14));
+        activate.Foreground      = new SolidColorBrush(Color.FromRgb(0xf5, 0xf5, 0xf5));
+        activate.BorderBrush     = new SolidColorBrush(Color.FromRgb(0xf5, 0xf5, 0xf5));
+        activate.BorderThickness = new Thickness(2, 0, 0, 0);
         _activeNavBtn = activate;
     }
 
@@ -1236,7 +1241,7 @@ public partial class MainWindow : Window
                 Text         = "No configs found. Save one or drop a .json file into the folder.",
                 FontFamily   = (FontFamily)FindResource("IBMPlexMono"),
                 FontSize     = 9,
-                Foreground   = new SolidColorBrush(Color.FromRgb(0x5a, 0x5a, 0x5a)),
+                Foreground   = new SolidColorBrush(Color.FromRgb(0x78, 0x78, 0x78)),
                 TextWrapping = TextWrapping.Wrap,
                 Margin       = new Thickness(0, 4, 0, 4)
             });

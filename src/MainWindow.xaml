@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title=""
-        Width="700" Height="560"
+        Width="760" Height="600"
         WindowStyle="None" ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
         Background="Transparent"
@@ -42,7 +42,7 @@
                     <TextBlock x:Name="StatusText"
                                FontFamily="{StaticResource IBMPlexMono}"
                                FontSize="11"
-                               Foreground="#5a5a5a"
+                               Foreground="#787878"
                                HorizontalAlignment="Center"
                                Margin="0,14,0,0"
                                Opacity="0"
@@ -106,7 +106,7 @@
                                 <TextBlock Text="MAIN"
                                            FontFamily="{StaticResource IBMPlexMono}"
                                            FontSize="9"
-                                           Foreground="#5a5a5a"
+                                           Foreground="#787878"
                                            Margin="16,0,0,6"/>
                                 <Button x:Name="BtnCrosshairs"
                                         Content="Crosshairs"
@@ -154,7 +154,7 @@
                                     <TextBlock Text="Configure your persistent screen crosshair overlay"
                                                FontFamily="{StaticResource IBMPlexMono}"
                                                FontSize="10"
-                                               Foreground="#5a5a5a"
+                                               Foreground="#787878"
                                                Margin="0,0,0,18"/>
                                     <Rectangle Height="1" Fill="#1e1e1e" Margin="0,0,0,18"/>
 
@@ -176,7 +176,7 @@
                                             <TextBlock Text="Click a style to select it — click again to deselect"
                                                        FontFamily="{StaticResource IBMPlexMono}"
                                                        FontSize="9"
-                                                       Foreground="#5a5a5a"
+                                                       Foreground="#787878"
                                                        Margin="0,0,0,14"/>
                                             <WrapPanel x:Name="CrTemplatePanel"/>
                                         </StackPanel>
@@ -195,7 +195,7 @@
                                             <TextBlock Text="Crosshairs you saved from the Builder — click to use, × to delete"
                                                        FontFamily="{StaticResource IBMPlexMono}"
                                                        FontSize="9"
-                                                       Foreground="#5a5a5a"
+                                                       Foreground="#787878"
                                                        Margin="0,0,0,14"/>
                                             <WrapPanel x:Name="CustomTemplatePanel"/>
                                         </StackPanel>
@@ -212,7 +212,7 @@
 
                                             <TextBlock Text="COLOR"
                                                        FontFamily="{StaticResource IBMPlexMono}"
-                                                       FontSize="9" Foreground="#5a5a5a"
+                                                       FontSize="9" Foreground="#787878"
                                                        Margin="0,0,0,8"/>
                                             <WrapPanel x:Name="CrColorPanel" Margin="0,0,0,8"/>
                                             <Button x:Name="CrCustomColorBtn"
@@ -332,7 +332,7 @@
                                                                    Foreground="#f5f5f5"/>
                                                         <TextBlock Text="Draw a dark outline behind the crosshair shape"
                                                                    FontFamily="{StaticResource IBMPlexMono}"
-                                                                   FontSize="9" Foreground="#5a5a5a"
+                                                                   FontSize="9" Foreground="#787878"
                                                                    Margin="0,3,0,0"/>
                                                     </StackPanel>
                                                     <ToggleButton x:Name="CrOutlineToggle"
@@ -347,7 +347,7 @@
                                             <Grid Margin="0,0,0,8">
                                                 <TextBlock Text="OUTLINE THICKNESS"
                                                            FontFamily="{StaticResource IBMPlexMono}"
-                                                           FontSize="9" Foreground="#5a5a5a"/>
+                                                           FontSize="9" Foreground="#787878"/>
                                                 <TextBlock x:Name="CrOutlineSizeLabel"
                                                            FontFamily="{StaticResource IBMPlexMono}"
                                                            FontSize="9" FontWeight="Bold"
@@ -363,7 +363,7 @@
                                             <Grid Margin="0,0,0,8">
                                                 <TextBlock Text="SIZE (%)"
                                                            FontFamily="{StaticResource IBMPlexMono}"
-                                                           FontSize="9" Foreground="#5a5a5a"/>
+                                                           FontSize="9" Foreground="#787878"/>
                                                 <TextBlock x:Name="CrSizeLabel"
                                                            FontFamily="{StaticResource IBMPlexMono}"
                                                            FontSize="9" FontWeight="Bold"
@@ -379,7 +379,7 @@
                                             <Grid Margin="0,0,0,8">
                                                 <TextBlock Text="OPACITY (%)"
                                                            FontFamily="{StaticResource IBMPlexMono}"
-                                                           FontSize="9" Foreground="#5a5a5a"/>
+                                                           FontSize="9" Foreground="#787878"/>
                                                 <TextBlock x:Name="CrOpacityLabel"
                                                            FontFamily="{StaticResource IBMPlexMono}"
                                                            FontSize="9" FontWeight="Bold"
@@ -395,7 +395,7 @@
                                             <Grid Margin="0,0,0,8">
                                                 <TextBlock Text="CENTER GAP"
                                                            FontFamily="{StaticResource IBMPlexMono}"
-                                                           FontSize="9" Foreground="#5a5a5a"/>
+                                                           FontSize="9" Foreground="#787878"/>
                                                 <TextBlock x:Name="CrGapLabel"
                                                            FontFamily="{StaticResource IBMPlexMono}"
                                                            FontSize="9" FontWeight="Bold"
@@ -421,7 +421,7 @@
                                     <TextBlock Text="Configs are stored in %APPDATA%\CrosshairY — drop a friend's .json in there and reload"
                                                FontFamily="{StaticResource IBMPlexMono}"
                                                FontSize="10"
-                                               Foreground="#5a5a5a"
+                                               Foreground="#787878"
                                                Margin="0,0,0,18"
                                                TextWrapping="Wrap"/>
                                     <Rectangle Height="1" Fill="#1e1e1e" Margin="0,0,0,18"/>
@@ -436,7 +436,7 @@
                                                        Margin="0,0,0,14"/>
                                             <TextBlock Text="NAME"
                                                        FontFamily="{StaticResource IBMPlexMono}"
-                                                       FontSize="9" Foreground="#5a5a5a"
+                                                       FontSize="9" Foreground="#787878"
                                                        Margin="0,0,0,5"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
@@ -467,7 +467,7 @@
                                             <TextBlock Text="Export copies a code to your clipboard. Import reads it and saves using the name above."
                                                        FontFamily="{StaticResource IBMPlexMono}"
                                                        FontSize="9"
-                                                       Foreground="#5a5a5a"
+                                                       Foreground="#787878"
                                                        TextWrapping="Wrap"
                                                        Margin="0,0,0,14"/>
                                             <Grid>
@@ -519,7 +519,7 @@
                                     <TextBlock Text="Draw your own crosshair with brush, shape and fill tools"
                                                FontFamily="{StaticResource IBMPlexMono}"
                                                FontSize="10"
-                                               Foreground="#5a5a5a"
+                                               Foreground="#787878"
                                                Margin="0,0,0,18"/>
                                     <Rectangle Height="1" Fill="#1e1e1e" Margin="0,0,0,18"/>
 
@@ -537,12 +537,12 @@
                                                        Text="tool: pencil  #ffffff"
                                                        FontFamily="{StaticResource IBMPlexMono}"
                                                        FontSize="9"
-                                                       Foreground="#5a5a5a"
+                                                       Foreground="#787878"
                                                        Margin="0,0,0,12"/>
 
                                             <TextBlock Text="GRID SIZE"
                                                        FontFamily="{StaticResource IBMPlexMono}"
-                                                       FontSize="9" Foreground="#5a5a5a"
+                                                       FontSize="9" Foreground="#787878"
                                                        Margin="0,0,0,6"/>
                                             <StackPanel x:Name="BuilderSizePanel" Orientation="Horizontal" Margin="0,0,0,12">
                                                 <Button Content="15×15"
@@ -600,7 +600,7 @@
                                             <TextBlock Text="Click or drag to paint. The overlay updates live as you draw."
                                                        FontFamily="{StaticResource IBMPlexMono}"
                                                        FontSize="9"
-                                                       Foreground="#5a5a5a"
+                                                       Foreground="#787878"
                                                        Margin="0,0,0,14"/>
 
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -678,7 +678,7 @@
                                     <TextBlock Text="General configuration"
                                                FontFamily="{StaticResource IBMPlexMono}"
                                                FontSize="10"
-                                               Foreground="#5a5a5a"
+                                               Foreground="#787878"
                                                Margin="0,0,0,18"/>
                                     <Rectangle Height="1" Fill="#1e1e1e" Margin="0,0,0,18"/>
 
@@ -692,10 +692,10 @@
                                                        Margin="0,0,0,14"/>
                                             <TextBlock Text="PROOF WINDOW KEY"
                                                        FontFamily="{StaticResource IBMPlexMono}"
-                                                       FontSize="9" Foreground="#5a5a5a"/>
+                                                       FontSize="9" Foreground="#787878"/>
                                             <TextBlock Text="Hides the window from screen capture software"
                                                        FontFamily="{StaticResource IBMPlexMono}"
-                                                       FontSize="9" Foreground="#5a5a5a"
+                                                       FontSize="9" Foreground="#787878"
                                                        Margin="0,3,0,8"/>
                                             <Button x:Name="ProofKeyBtn"
                                                     Style="{StaticResource DarkBtn}"
@@ -704,11 +704,11 @@
 
                                             <TextBlock Text="PROFILE CYCLE KEY"
                                                        FontFamily="{StaticResource IBMPlexMono}"
-                                                       FontSize="9" Foreground="#5a5a5a"
+                                                       FontSize="9" Foreground="#787878"
                                                        Margin="0,14,0,0"/>
                                             <TextBlock Text="Cycle through saved profiles without opening the UI"
                                                        FontFamily="{StaticResource IBMPlexMono}"
-                                                       FontSize="9" Foreground="#5a5a5a"
+                                                       FontSize="9" Foreground="#787878"
                                                        Margin="0,3,0,8"/>
                                             <Button x:Name="CycleKeyBtn"
                                                     Style="{StaticResource DarkBtn}"
@@ -727,7 +727,7 @@
                                                        Margin="0,0,0,4"/>
                                             <TextBlock Text="Choose which monitor the crosshair appears on"
                                                        FontFamily="{StaticResource IBMPlexMono}"
-                                                       FontSize="9" Foreground="#5a5a5a"
+                                                       FontSize="9" Foreground="#787878"
                                                        Margin="0,0,0,12"/>
                                             <StackPanel x:Name="MonitorPanel"/>
                                         </StackPanel>
@@ -745,7 +745,7 @@
                                     <TextBlock Text="If you enjoy CrosshairY, consider supporting the project"
                                                FontFamily="{StaticResource IBMPlexMono}"
                                                FontSize="10"
-                                               Foreground="#5a5a5a"
+                                               Foreground="#787878"
                                                Margin="0,0,0,18"/>
                                     <Rectangle Height="1" Fill="#1e1e1e" Margin="0,0,0,18"/>
 
@@ -794,7 +794,7 @@
                                             <TextBlock Text="CrosshairY is free. Any support is appreciated."
                                                        FontFamily="{StaticResource IBMPlexMono}"
                                                        FontSize="9"
-                                                       Foreground="#5a5a5a"
+                                                       Foreground="#787878"
                                                        Margin="0,0,0,14"/>
                                             <Button Content="SUPPORT CUTE PETS"
                                                     Style="{StaticResource DarkBtn}"
@@ -848,7 +848,7 @@
                                Text="See you next time."
                                FontFamily="{StaticResource IBMPlexMono}"
                                FontSize="11"
-                               Foreground="#5a5a5a"
+                               Foreground="#787878"
                                HorizontalAlignment="Center"
                                Margin="0,14,0,0"
                                Opacity="0"/>

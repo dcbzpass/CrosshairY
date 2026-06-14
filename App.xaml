@@ -11,7 +11,7 @@
         <SolidColorBrush x:Key="BgHover"  Color="#1e1e1e"/>
         <SolidColorBrush x:Key="BorderClr" Color="#1e1e1e"/>
         <SolidColorBrush x:Key="White"    Color="#f5f5f5"/>
-        <SolidColorBrush x:Key="Muted"    Color="#5a5a5a"/>
+        <SolidColorBrush x:Key="Muted"    Color="#787878"/>
         <SolidColorBrush x:Key="Muted2"   Color="#2a2a2a"/>
         <SolidColorBrush x:Key="Red"      Color="#aa2020"/>
 
@@ -230,7 +230,7 @@
         <Style x:Key="SideNavBtn" TargetType="Button">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="Background"            Value="Transparent"/>
-            <Setter Property="Foreground"            Value="#5a5a5a"/>
+            <Setter Property="Foreground"            Value="#787878"/>
             <Setter Property="FontFamily"            Value="{StaticResource IBMPlexMono}"/>
             <Setter Property="FontSize"              Value="11"/>
             <Setter Property="Height"                Value="34"/>
@@ -238,11 +238,15 @@
             <Setter Property="Cursor"                Value="Hand"/>
             <Setter Property="Padding"               Value="16,0"/>
             <Setter Property="Tag"                   Value="#0f0f0f"/>
+            <Setter Property="BorderBrush"           Value="#f5f5f5"/>
+            <Setter Property="BorderThickness"       Value="0"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd"
                                 Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="Center"/>
@@ -382,6 +386,26 @@
                         <Grid Height="16">
                             <Rectangle Height="1" Fill="#1e1e1e" VerticalAlignment="Center"/>
                             <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Focusable="False" OverridesDefaultStyle="True" Command="Slider.DecreaseLarge">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Grid Background="Transparent">
+                                                    <Rectangle Height="2" Fill="#f5f5f5" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Focusable="False" OverridesDefaultStyle="True" Command="Slider.IncreaseLarge">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Grid Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
                                 <Track.Thumb>
                                     <Thumb Cursor="Hand">
                                         <Thumb.Template>
