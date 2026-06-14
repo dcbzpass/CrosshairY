@@ -33,12 +33,15 @@ CrosshairY draws a persistent crosshair directly on your screen as a transparent
 - **Size slider** from 50% to 200%
 - **Opacity slider** from 10% to 100%
 - **Center gap slider** - control the gap between crosshair arms (0-20)
+- **Position offset** - nudge the crosshair off-center on X and Y with `−`/`+` buttons (hold to repeat) or by typing an exact value, clamped to the screen bounds
+- **Follow cursor mode** - replaces the Windows cursor with your crosshair so it tracks the pointer with zero lag instead of sitting in the center. Restores the original cursors the moment it is turned off. Works with any template or drawn crosshair
 - **Multi-monitor** - pick which display the crosshair appears on
-- **Profile system** - save, load, overwrite and delete configs stored locally in `%APPDATA%\CrosshairY\Configs`. Drop a friend's `.json` in the folder and hit reload
+- **Profile system** - save, load, overwrite, duplicate and delete configs stored locally in `%APPDATA%\CrosshairY\Configs`, each shown with a live crosshair thumbnail. Drop a friend's `.json` in the folder and hit reload
 - **Share codes** - export the current config to the clipboard as a compact code and import a friend's code in one click
 - **Last used config** auto-loads on startup
 - **Proof mode** - hides the window from screen capture software with a single keypress
-- **Profile cycle hotkey** - cycle through saved profiles without opening the UI
+- **Global hotkeys** - bind keys to cycle profiles, toggle the overlay on/off, toggle follow-cursor mode and trigger proof mode, all without opening the UI. Press **ESC** while binding to clear a key back to NONE
+- **Auto-update** - on launch CrosshairY checks GitHub for a newer release and shows a small notification. One click downloads it and silently swaps the running executable, then relaunches. Toggle the notifications off in Settings, or check manually any time
 - **No taskbar icon**, borderless, transparent, runs silently in the background
 - **Launch surveys** - occasional single-question popups at launch milestones, never more than once each
 
@@ -87,19 +90,29 @@ Configs are plain `.json` files stored in `%APPDATA%\CrosshairY\Configs\`.
 - **Save** - type a name in the Profiles tab and hit Save
 - **Load** - click Load next to any config to apply it instantly
 - **Overwrite** - hit Save next to an existing config to update it with your current settings
+- **Duplicate** - hit Dup to copy a config to a new `name (2).json`
+- **Thumbnail** - every saved config shows a live preview of its crosshair
 - **Share file** - paste a friend's `.json` into the folder and hit Reload to see it appear
 - **Export code** - copies the current config to the clipboard as a `CY1:` share code
 - **Import code** - reads a `CY1:` code from the clipboard and saves it as a profile (named from the box, or `imported`)
 
-A profile stores the template, color, outline, size, opacity, gap and any custom builder crosshair. The last loaded config is remembered and auto-applied on the next launch.
+A profile stores the template, color, outline, size, opacity, gap, position offset, follow-cursor mode and any custom builder crosshair. The last loaded config is remembered and auto-applied on the next launch.
 
-Hotkeys (proof key, cycle key) are global settings and are stored separately in `%APPDATA%\CrosshairY\settings.dat`. They are never overwritten by loading a profile.
+Hotkeys (proof key, profile cycle key, toggle-overlay key, follow-toggle key) and the update-notification preference are global settings stored separately in `%APPDATA%\CrosshairY\settings.dat`. They are never overwritten by loading a profile. Press **ESC** while binding a key to clear it back to NONE.
 
 ---
 
 ## Proof mode
 
 Pressing the configured proof key calls `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)` on the overlay window, hiding it from OBS, Discord screenshare, and similar capture software. Press again to restore. Configurable under Settings.
+
+---
+
+## Updates
+
+On launch CrosshairY asks GitHub for the latest published release. If it is newer than the running version, a small notification slides in. Clicking **Download & Install** fetches the release's `CrosshairY.exe` asset, verifies its size, then launches a hidden script that waits for CrosshairY to close, swaps the executable in place and relaunches it - no visible terminal. You can turn the notifications off or run a manual check under **Settings → Update notifications**.
+
+For the updater to work, each release must be published as a GitHub Release with `CrosshairY.exe` attached as an asset.
 
 ---
 
@@ -122,7 +135,9 @@ CrosshairY/
 |   +-- MainWindow.xaml             - main UI layout
 |   +-- MainWindow.xaml.cs          - UI logic, color picker, builder, profiles
 |   +-- CrosshairOverlay.xaml       - transparent overlay window
-|   +-- CrosshairOverlay.xaml.cs    - crosshair draw logic (CrDraw)
+|   +-- CrosshairOverlay.xaml.cs    - crosshair draw logic (CrDraw), offset and follow-cursor rendering
+|   +-- CursorReplacer.cs           - swaps the system cursor for the crosshair and restores it
+|   +-- Updater.cs                  - GitHub release check, download and silent self-replace
 |   +-- SurveyWindow.xaml           - survey popup layout
 |   +-- SurveyWindow.xaml.cs        - survey logic, posts to the Supabase endpoint
 |

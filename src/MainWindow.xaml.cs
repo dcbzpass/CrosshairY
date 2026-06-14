@@ -1373,10 +1373,14 @@ public partial class MainWindow : Window
     private void FinishBinding(string key)
     {
         if (!_bindingMode) return;
-        _bindingCallback?.Invoke(key);
+
+        bool   unbind = key == "Key.esc";
+        string value  = unbind ? "" : key;
+
+        _bindingCallback?.Invoke(value);
         if (_bindingBtn is { } b)
         {
-            b.Content    = DisplayKey(key);
+            b.Content    = unbind ? "NONE" : DisplayKey(value);
             b.Background = (Brush)FindResource("BgBtn");
         }
         _bindingMode     = false;
