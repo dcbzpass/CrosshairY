@@ -375,11 +375,11 @@ public partial class MainWindow : Window
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
             };
             MainGrid.BeginAnimation(OpacityProperty, fadeIn);
+            _crOverlay = new CrosshairOverlay();
+            LoadSettings();
             InitSettingsPanel();
             SetupSmoothScroll(MainScrollViewer);
             AnimateNavSelect(BtnCrosshairs);
-            _crOverlay = new CrosshairOverlay();
-            LoadSettings();
             TryLoadLastUsed();
             InitCrosshairsPanel();
             InitBuilderPanel();
