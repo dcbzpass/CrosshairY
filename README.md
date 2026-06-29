@@ -42,8 +42,10 @@ CrosshairY draws a persistent crosshair directly on your screen as a transparent
 - **Proof mode** - hides the window from screen capture software with a single keypress
 - **Global hotkeys** - bind keys to cycle profiles, toggle the overlay on/off, toggle follow-cursor mode and trigger proof mode, all without opening the UI. Press **ESC** while binding to clear a key back to NONE
 - **Auto-update** - on launch CrosshairY checks GitHub for a newer release and shows a small notification. One click downloads it and silently swaps the running executable, then relaunches. Toggle the notifications off in Settings, or check manually any time
+- **Start with Windows** - optional auto-launch on sign-in, toggled in Settings (writes a per-user `Run` key, no admin needed)
+- **System tray** - double-click the tray icon to open; right-click to toggle the overlay, follow-cursor or proof mode on/off, switch between saved profiles, or exit
 - **No taskbar icon**, borderless, transparent, runs silently in the background
-- **Launch surveys** - occasional single-question popups at launch milestones, never more than once each
+- **Launch surveys** - occasional single-question popups at launch milestones, never more than once each. Picking **Other** reveals a free-text field so you can type your own answer
 
 ---
 

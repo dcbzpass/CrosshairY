@@ -71,7 +71,7 @@
                                            Foreground="#f5f5f5"
                                            VerticalAlignment="Center"/>
                                 <TextBlock x:Name="VersionLabel"
-                                           Text=" v1.0.6"
+                                           Text=" v1.0.7"
                                            FontFamily="{StaticResource IBMPlexMono}"
                                            FontSize="9"
                                            Foreground="#2a2a2a"
@@ -857,6 +857,28 @@
                                                                   VerticalAlignment="Center"
                                                                   Checked="UpdateNotifyToggle_Changed"
                                                                   Unchecked="UpdateNotifyToggle_Changed"/>
+                                                </Grid>
+                                            </Border>
+
+                                            <Border BorderBrush="#1e1e1e" BorderThickness="0,1,0,0"
+                                                    Margin="0,16,0,0" Padding="0,14,0,0">
+                                                <Grid>
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock Text="START WITH WINDOWS"
+                                                                   FontFamily="{StaticResource IBMPlexMono}"
+                                                                   FontSize="9" FontWeight="Bold"
+                                                                   Foreground="#f5f5f5"/>
+                                                        <TextBlock Text="Launch CrosshairY automatically when you sign in"
+                                                                   FontFamily="{StaticResource IBMPlexMono}"
+                                                                   FontSize="9" Foreground="#787878"
+                                                                   Margin="0,3,0,0"/>
+                                                    </StackPanel>
+                                                    <ToggleButton x:Name="StartupToggle"
+                                                                  Style="{StaticResource ToggleSwitch}"
+                                                                  HorizontalAlignment="Right"
+                                                                  VerticalAlignment="Center"
+                                                                  Checked="StartupToggle_Changed"
+                                                                  Unchecked="StartupToggle_Changed"/>
                                                 </Grid>
                                             </Border>
 

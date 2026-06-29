@@ -9,6 +9,17 @@ public partial class App : System.Windows.Application
     private System.Windows.Forms.NotifyIcon?  _tray;
     private System.Windows.Forms.ContextMenuStrip? _trayMenu;
 
+    private System.Windows.Forms.ToolStripMenuItem? _itemOverlay;
+    private System.Windows.Forms.ToolStripMenuItem? _itemFollow;
+    private System.Windows.Forms.ToolStripMenuItem? _itemProof;
+    private System.Windows.Forms.ToolStripMenuItem? _itemProfiles;
+
+    private System.Drawing.Font? _menuFont;
+    private System.Drawing.Font? _menuFontBold;
+    private TrayMenuRenderer? _menuRenderer;
+
+    private static MainWindow? MainWin => Current.MainWindow as MainWindow;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         CursorReplacer.ForceRestore();
@@ -85,8 +96,9 @@ public partial class App : System.Windows.Application
         var red      = System.Drawing.ColorTranslator.FromHtml("#aa2020");
         var redHover = System.Drawing.ColorTranslator.FromHtml("#cc2828");
 
-        var font     = new System.Drawing.Font("Courier New", 8.5f, System.Drawing.FontStyle.Regular);
-        var fontBold = new System.Drawing.Font("Courier New", 8.5f, System.Drawing.FontStyle.Bold);
+        _menuFont     = new System.Drawing.Font("Courier New", 8.5f, System.Drawing.FontStyle.Regular);
+        _menuFontBold = new System.Drawing.Font("Courier New", 8.5f, System.Drawing.FontStyle.Bold);
+        _menuRenderer = new TrayMenuRenderer(bgDeep, bgBtn, bgHover, white, muted);
 
         var strip = new System.Windows.Forms.ContextMenuStrip
         {
@@ -94,23 +106,49 @@ public partial class App : System.Windows.Application
             ForeColor       = white,
             ShowImageMargin = false,
             AutoSize        = true,
-            MinimumSize     = new System.Drawing.Size(90, 0),
+            MinimumSize     = new System.Drawing.Size(150, 0),
             RenderMode      = System.Windows.Forms.ToolStripRenderMode.Professional,
-            Renderer        = new TrayMenuRenderer(bgDeep, bgBtn, bgHover, white, muted)
+            Renderer        = _menuRenderer
         };
 
         var itemOpen = new System.Windows.Forms.ToolStripMenuItem("OPEN")
         {
-            Font      = fontBold,
+            Font      = _menuFontBold,
             ForeColor = white
         };
         itemOpen.Click += (_, _) => ShowMainWindow();
 
-        var sep = new System.Windows.Forms.ToolStripSeparator();
+        _itemOverlay = new System.Windows.Forms.ToolStripMenuItem("OVERLAY")
+        {
+            Font      = _menuFont,
+            ForeColor = white
+        };
+        _itemOverlay.Click += (_, _) => Dispatcher.Invoke(() => MainWin?.TrayToggleOverlay());
+
+        _itemFollow = new System.Windows.Forms.ToolStripMenuItem("FOLLOW CURSOR")
+        {
+            Font      = _menuFont,
+            ForeColor = white
+        };
+        _itemFollow.Click += (_, _) => Dispatcher.Invoke(() => MainWin?.TrayToggleFollow());
+
+        _itemProof = new System.Windows.Forms.ToolStripMenuItem("PROOF MODE")
+        {
+            Font      = _menuFont,
+            ForeColor = white
+        };
+        _itemProof.Click += (_, _) => Dispatcher.Invoke(() => MainWin?.TrayToggleProof());
+
+        _itemProfiles = new System.Windows.Forms.ToolStripMenuItem("PROFILES")
+        {
+            Font      = _menuFont,
+            ForeColor = white
+        };
+        StyleDropDown(_itemProfiles.DropDown, bgDeep);
 
         var itemExit = new System.Windows.Forms.ToolStripMenuItem("EXIT")
         {
-            Font      = fontBold,
+            Font      = _menuFontBold,
             ForeColor = red
         };
         itemExit.MouseEnter += (_, _) => itemExit.ForeColor = redHover;
@@ -127,10 +165,70 @@ public partial class App : System.Windows.Application
         };
 
         strip.Items.Add(itemOpen);
-        strip.Items.Add(sep);
+        strip.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+        strip.Items.Add(_itemOverlay);
+        strip.Items.Add(_itemFollow);
+        strip.Items.Add(_itemProof);
+        strip.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+        strip.Items.Add(_itemProfiles);
+        strip.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         strip.Items.Add(itemExit);
 
+        strip.Opening += (_, _) => RefreshTrayMenu();
+
         return strip;
+    }
+
+    private void StyleDropDown(System.Windows.Forms.ToolStripDropDown dropDown, System.Drawing.Color bg)
+    {
+        dropDown.BackColor       = bg;
+        dropDown.RenderMode      = System.Windows.Forms.ToolStripRenderMode.Professional;
+        if (_menuRenderer != null) dropDown.Renderer = _menuRenderer;
+        if (dropDown is System.Windows.Forms.ToolStripDropDownMenu menu)
+            menu.ShowImageMargin = false;
+    }
+
+    private void RefreshTrayMenu()
+    {
+        var mw    = MainWin;
+        var white = System.Drawing.ColorTranslator.FromHtml("#f5f5f5");
+        var muted = System.Drawing.ColorTranslator.FromHtml("#5a5a5a");
+
+        if (_itemOverlay != null)
+            _itemOverlay.Text = "OVERLAY        " + (mw?.TrayOverlayOn == true ? "ON" : "OFF");
+        if (_itemFollow != null)
+            _itemFollow.Text = "FOLLOW CURSOR  " + (mw?.TrayFollowOn == true ? "ON" : "OFF");
+        if (_itemProof != null)
+            _itemProof.Text = "PROOF MODE     " + (mw?.TrayProofOn == true ? "ON" : "OFF");
+
+        if (_itemProfiles == null) return;
+
+        _itemProfiles.DropDownItems.Clear();
+        var profiles = mw?.TrayProfiles();
+
+        if (profiles == null || profiles.Count == 0)
+        {
+            var none = new System.Windows.Forms.ToolStripMenuItem("no configs saved")
+            {
+                Font      = _menuFont,
+                ForeColor = muted,
+                Enabled   = false
+            };
+            _itemProfiles.DropDownItems.Add(none);
+            return;
+        }
+
+        foreach (var (name, path) in profiles)
+        {
+            var item = new System.Windows.Forms.ToolStripMenuItem(name)
+            {
+                Font      = _menuFont,
+                ForeColor = white
+            };
+            string captured = path;
+            item.Click += (_, _) => Dispatcher.Invoke(() => MainWin?.TrayLoadProfile(captured));
+            _itemProfiles.DropDownItems.Add(item);
+        }
     }
 
     private static void ShowMainWindow()

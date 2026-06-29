@@ -29,7 +29,7 @@ public partial class MainWindow : Window
 
     private CrosshairOverlay? _crOverlay;
 
-    public const string Version = "1.0.6";
+    public const string Version = "1.0.7";
     private string? _updateExeUrl;
     private string? _updateHtmlUrl;
     private long    _updateExeSize;
@@ -430,6 +430,7 @@ public partial class MainWindow : Window
         ToggleKeyBtn.Content = string.IsNullOrEmpty(_s.ToggleKey) ? "NONE" : DisplayKey(_s.ToggleKey);
         FollowKeyBtn.Content = string.IsNullOrEmpty(_s.FollowKey) ? "NONE" : DisplayKey(_s.FollowKey);
         UpdateNotifyToggle.IsChecked = _s.UpdateNotifications;
+        StartupToggle.IsChecked = StartupManager.IsEnabled();
         UpdateLastCheckedLabel();
         BuildMonitorButtons();
     }
@@ -925,6 +926,11 @@ public partial class MainWindow : Window
         _s.UpdateNotifications = UpdateNotifyToggle.IsChecked == true;
         SaveSettings();
         if (!_s.UpdateNotifications) HideUpdateToast();
+    }
+
+    private void StartupToggle_Changed(object s, RoutedEventArgs e)
+    {
+        StartupManager.SetEnabled(StartupToggle.IsChecked == true);
     }
 
     private async System.Threading.Tasks.Task CheckForUpdatesAsync(bool manual = false)
@@ -1425,6 +1431,29 @@ public partial class MainWindow : Window
     private void ToggleFollowViaHotkey()
     {
         CrFollowToggle.IsChecked = !(CrFollowToggle.IsChecked == true);
+    }
+
+    internal void TrayToggleOverlay() => ToggleCrosshairOn();
+    internal void TrayToggleFollow()  => ToggleFollowViaHotkey();
+    internal void TrayToggleProof()   => ToggleCaptureHide();
+
+    internal bool TrayOverlayOn => _crosshairOn;
+    internal bool TrayFollowOn  => CrFollowToggle?.IsChecked == true;
+    internal bool TrayProofOn   => _s.CaptureHidden;
+
+    internal void TrayLoadProfile(string path) => LoadProfile(path);
+
+    internal IReadOnlyList<(string name, string path)> TrayProfiles()
+    {
+        var list = new List<(string, string)>();
+        try
+        {
+            Directory.CreateDirectory(ProfilesDir);
+            foreach (var f in Directory.GetFiles(ProfilesDir, "*.json").OrderBy(f => f))
+                list.Add((Path.GetFileNameWithoutExtension(f), f));
+        }
+        catch { }
+        return list;
     }
 
     private void CycleProfile()
