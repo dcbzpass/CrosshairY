@@ -37,6 +37,7 @@ CrosshairY draws a persistent crosshair directly on your screen as a transparent
 - **Follow cursor mode** - replaces the Windows cursor with your crosshair so it tracks the pointer with zero lag instead of sitting in the center. Restores the original cursors the moment it is turned off. Works with any template or drawn crosshair
 - **Multi-monitor** - pick which display the crosshair appears on
 - **Profile system** - save, load, overwrite, duplicate and delete configs stored locally in `%APPDATA%\CrosshairY\Configs`, each shown with a live crosshair thumbnail. Drop a friend's `.json` in the folder and hit reload
+- **Auto game-profiles** - the **Games** tab maps a saved profile to a game, then loads it automatically when that game takes focus. Ships with a list of popular titles (Blood Strike, Valorant, CS2, Apex, Fortnite, Overwatch 2, Rainbow Six Siege, PUBG, Call of Duty, Marvel Rivals, The Finals, Destiny 2, Battlefield 2042) and lets you add any other game by its process name. Optional **auto-revert** restores your previous profile the moment you alt-tab out
 - **Share codes** - export the current config to the clipboard as a compact code and import a friend's code in one click
 - **Last used config** auto-loads on startup
 - **Proof mode** - hides the window from screen capture software with a single keypress
@@ -101,6 +102,14 @@ Configs are plain `.json` files stored in `%APPDATA%\CrosshairY\Configs\`.
 A profile stores the template, color, outline, size, opacity, gap, position offset, follow-cursor mode and any custom builder crosshair. The last loaded config is remembered and auto-applied on the next launch.
 
 Hotkeys (proof key, profile cycle key, toggle-overlay key, follow-toggle key) and the update-notification preference are global settings stored separately in `%APPDATA%\CrosshairY\settings.dat`. They are never overwritten by loading a profile. Press **ESC** while binding a key to clear it back to NONE.
+
+---
+
+## Auto game-profiles
+
+The **Games** tab assigns one of your saved profiles to each game. With **auto-switch** enabled, CrosshairY polls the focused window once a second, reads its process name, and loads the mapped profile when a known game comes to the front. Each game's button toggles `OFF` / `ON` (the assigned profile name shows on hover); enable **auto-revert** to fall back to the profile you had before, the moment no game is focused.
+
+A built-in list covers popular titles, and any other game can be added by its process executable name (for example `EscapeFromTarkov.exe`). The mappings, toggles and custom games are stored in `%APPDATA%\CrosshairY\settings.dat`.
 
 ---
 
