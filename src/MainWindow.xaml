@@ -124,6 +124,11 @@
                                         Style="{StaticResource SideNavBtn}"
                                         Margin="0,0,0,2"
                                         Click="BtnBuilder_Click"/>
+                                <Button x:Name="BtnGames"
+                                        Content="Games"
+                                        Style="{StaticResource SideNavBtn}"
+                                        Margin="0,0,0,2"
+                                        Click="BtnGames_Click"/>
                                 <Button x:Name="BtnSettings"
                                         Content="Settings"
                                         Style="{StaticResource SideNavBtn}"
@@ -759,6 +764,130 @@
                                                         Content="SAVE AS CROSSHAIR"
                                                         Style="{StaticResource DarkBtn}"
                                                         Click="BuilderSaveTemplate_Click"/>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+
+                                </StackPanel>
+
+                                <StackPanel x:Name="GamesPanel" Margin="28,24,28,28" Visibility="Collapsed">
+
+                                    <TextBlock Text="GAMES"
+                                               FontFamily="{StaticResource BebasNeue}"
+                                               FontSize="38"
+                                               Foreground="#f5f5f5"
+                                               Margin="0,0,0,2"/>
+                                    <TextBlock Text="Auto-load a profile when a game takes focus"
+                                               FontFamily="{StaticResource IBMPlexMono}"
+                                               FontSize="10"
+                                               Foreground="#787878"
+                                               Margin="0,0,0,18"/>
+                                    <Rectangle Height="1" Fill="#1e1e1e" Margin="0,0,0,18"/>
+
+                                    <Border BorderBrush="#1e1e1e" BorderThickness="1"
+                                            Background="#0f0f0f" Margin="0,0,0,10">
+                                        <StackPanel Margin="18,16,18,18">
+                                            <TextBlock Text="AUTO-SWITCH"
+                                                       FontFamily="{StaticResource BebasNeue}"
+                                                       FontSize="18"
+                                                       Foreground="#f5f5f5"
+                                                       Margin="0,0,0,14"/>
+
+                                            <Border BorderBrush="#1e1e1e" BorderThickness="0,0,0,1"
+                                                    Margin="0,0,0,14" Padding="0,0,0,14">
+                                                <Grid>
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock Text="ENABLE AUTO-SWITCH"
+                                                                   FontFamily="{StaticResource IBMPlexMono}"
+                                                                   FontSize="9" FontWeight="Bold"
+                                                                   Foreground="#f5f5f5"/>
+                                                        <TextBlock Text="Watch the focused window and load the mapped profile"
+                                                                   FontFamily="{StaticResource IBMPlexMono}"
+                                                                   FontSize="9" Foreground="#787878"
+                                                                   Margin="0,3,0,0"/>
+                                                    </StackPanel>
+                                                    <ToggleButton x:Name="AutoSwitchToggle"
+                                                                  Style="{StaticResource ToggleSwitch}"
+                                                                  HorizontalAlignment="Right"
+                                                                  VerticalAlignment="Center"
+                                                                  Checked="AutoSwitchToggle_Changed"
+                                                                  Unchecked="AutoSwitchToggle_Changed"/>
+                                                </Grid>
+                                            </Border>
+
+                                            <Grid>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="AUTO-REVERT"
+                                                               FontFamily="{StaticResource IBMPlexMono}"
+                                                               FontSize="9" FontWeight="Bold"
+                                                               Foreground="#f5f5f5"/>
+                                                    <TextBlock Text="Restore your previous profile when no game is focused"
+                                                               FontFamily="{StaticResource IBMPlexMono}"
+                                                               FontSize="9" Foreground="#787878"
+                                                               Margin="0,3,0,0"/>
+                                                </StackPanel>
+                                                <ToggleButton x:Name="AutoRevertToggle"
+                                                              Style="{StaticResource ToggleSwitch}"
+                                                              HorizontalAlignment="Right"
+                                                              VerticalAlignment="Center"
+                                                              Checked="AutoRevertToggle_Changed"
+                                                              Unchecked="AutoRevertToggle_Changed"/>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border BorderBrush="#1e1e1e" BorderThickness="1"
+                                            Background="#0f0f0f" Margin="0,0,0,10">
+                                        <StackPanel Margin="18,16,18,18">
+                                            <Grid Margin="0,0,0,4">
+                                                <TextBlock Text="GAME PROFILES"
+                                                           FontFamily="{StaticResource BebasNeue}"
+                                                           FontSize="18"
+                                                           Foreground="#f5f5f5"
+                                                           VerticalAlignment="Center"/>
+                                                <Button Content="RELOAD"
+                                                        Style="{StaticResource DarkBtn}"
+                                                        HorizontalAlignment="Right"
+                                                        Width="70"
+                                                        Click="ReloadGames_Click"/>
+                                            </Grid>
+                                            <TextBlock Text="Click a game's profile button to cycle through your saved configs (OFF = ignore)"
+                                                       FontFamily="{StaticResource IBMPlexMono}"
+                                                       FontSize="9"
+                                                       Foreground="#787878"
+                                                       Margin="0,0,0,14"
+                                                       TextWrapping="Wrap"/>
+                                            <StackPanel x:Name="GamesListPanel"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border BorderBrush="#1e1e1e" BorderThickness="1"
+                                            Background="#0f0f0f" Margin="0,0,0,10">
+                                        <StackPanel Margin="18,16,18,18">
+                                            <TextBlock Text="CUSTOM GAME"
+                                                       FontFamily="{StaticResource BebasNeue}"
+                                                       FontSize="18"
+                                                       Foreground="#f5f5f5"
+                                                       Margin="0,0,0,4"/>
+                                            <TextBlock Text="Add any game by its process name, e.g. EscapeFromTarkov.exe"
+                                                       FontFamily="{StaticResource IBMPlexMono}"
+                                                       FontSize="9"
+                                                       Foreground="#787878"
+                                                       Margin="0,0,0,14"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="10"/>
+                                                    <ColumnDefinition Width="80"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox x:Name="CustomGameBox"
+                                                         Grid.Column="0"
+                                                         Style="{StaticResource DarkEntry}"
+                                                         Text=""/>
+                                                <Button Grid.Column="2"
+                                                        Content="ADD"
+                                                        Style="{StaticResource DarkBtn}"
+                                                        Click="AddCustomGame_Click"/>
                                             </Grid>
                                         </StackPanel>
                                     </Border>

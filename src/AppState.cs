@@ -27,4 +27,9 @@ public class AppState
 
     public List<string> CrCustomPixels { get; set; } = new();
     public int CrBuilderSize { get; set; } = 15;
+
+    public bool AutoSwitchGames   { get; set; } = false;
+    public bool AutoRevertProfile { get; set; } = false;
+    public Dictionary<string, string> GameProfiles { get; set; } = new();
+    public List<string> CustomGames { get; set; } = new();
 }

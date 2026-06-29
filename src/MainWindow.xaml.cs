@@ -128,6 +128,12 @@ public partial class MainWindow : Window
     [DllImport("user32.dll", SetLastError = true)]
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
     private const int GWL_EXSTYLE      = -20;
     private const int WS_EX_TOOLWINDOW = 0x00000080;
     private const int WS_EX_APPWINDOW  = 0x00040000;
@@ -378,6 +384,7 @@ public partial class MainWindow : Window
             _crOverlay = new CrosshairOverlay();
             LoadSettings();
             InitSettingsPanel();
+            InitGamesPanel();
             SetupSmoothScroll(MainScrollViewer);
             AnimateNavSelect(BtnCrosshairs);
             TryLoadLastUsed();
@@ -1315,6 +1322,7 @@ public partial class MainWindow : Window
         ProfilesPanel.Visibility   = Visibility.Collapsed;
         SupportPanel.Visibility    = Visibility.Collapsed;
         BuilderPanel.Visibility    = Visibility.Collapsed;
+        GamesPanel.Visibility      = Visibility.Collapsed;
         FadeInPanel(CrosshairsPanel);
         AnimateNavSelect(BtnCrosshairs);
         _scrollTarget = 0;
@@ -1328,6 +1336,7 @@ public partial class MainWindow : Window
         ProfilesPanel.Visibility   = Visibility.Collapsed;
         SupportPanel.Visibility    = Visibility.Collapsed;
         BuilderPanel.Visibility    = Visibility.Collapsed;
+        GamesPanel.Visibility      = Visibility.Collapsed;
         FadeInPanel(SettingsPanel);
         AnimateNavSelect(BtnSettings);
         _scrollTarget = 0;
@@ -1341,6 +1350,7 @@ public partial class MainWindow : Window
         ProfilesPanel.Visibility   = Visibility.Collapsed;
         SettingsPanel.Visibility   = Visibility.Collapsed;
         BuilderPanel.Visibility    = Visibility.Collapsed;
+        GamesPanel.Visibility      = Visibility.Collapsed;
         FadeInPanel(SupportPanel);
         AnimateNavSelect(BtnSupport);
         _scrollTarget = 0;
@@ -1354,6 +1364,7 @@ public partial class MainWindow : Window
         ProfilesPanel.Visibility   = Visibility.Collapsed;
         SettingsPanel.Visibility   = Visibility.Collapsed;
         SupportPanel.Visibility    = Visibility.Collapsed;
+        GamesPanel.Visibility      = Visibility.Collapsed;
         FadeInPanel(BuilderPanel);
         AnimateNavSelect(BtnBuilder);
         _scrollTarget = 0;
@@ -1477,11 +1488,27 @@ public partial class MainWindow : Window
         SettingsPanel.Visibility   = Visibility.Collapsed;
         SupportPanel.Visibility    = Visibility.Collapsed;
         BuilderPanel.Visibility    = Visibility.Collapsed;
+        GamesPanel.Visibility      = Visibility.Collapsed;
         FadeInPanel(ProfilesPanel);
         AnimateNavSelect(BtnProfiles);
         _scrollTarget = 0;
         MainScrollViewer.ScrollToTop();
         LoadProfileList();
+    }
+
+    private void BtnGames_Click(object s, RoutedEventArgs e)
+    {
+        GamesPanel.Visibility      = Visibility.Visible;
+        CrosshairsPanel.Visibility = Visibility.Collapsed;
+        ProfilesPanel.Visibility   = Visibility.Collapsed;
+        SettingsPanel.Visibility   = Visibility.Collapsed;
+        SupportPanel.Visibility    = Visibility.Collapsed;
+        BuilderPanel.Visibility    = Visibility.Collapsed;
+        FadeInPanel(GamesPanel);
+        AnimateNavSelect(BtnGames);
+        _scrollTarget = 0;
+        MainScrollViewer.ScrollToTop();
+        BuildGamesList();
     }
 
 
@@ -1801,7 +1828,11 @@ public partial class MainWindow : Window
                 follow_key           = _s.FollowKey,
                 monitor_index        = _s.MonitorIndex,
                 update_notifications = _s.UpdateNotifications,
-                last_update_check    = _s.LastUpdateCheck
+                last_update_check    = _s.LastUpdateCheck,
+                auto_switch_games    = _s.AutoSwitchGames,
+                auto_revert_profile  = _s.AutoRevertProfile,
+                game_profiles        = _s.GameProfiles,
+                custom_games         = _s.CustomGames
             };
             File.WriteAllText(SettingsFile, JsonSerializer.Serialize(cfg));
         }
@@ -1822,6 +1853,21 @@ public partial class MainWindow : Window
             if (r.TryGetProperty("monitor_index", out var mi) && mi.TryGetInt32(out var midx)) _s.MonitorIndex = midx;
             if (r.TryGetProperty("update_notifications", out var un) && un.ValueKind == JsonValueKind.False) _s.UpdateNotifications = false;
             if (r.TryGetProp("last_update_check", out v)) _s.LastUpdateCheck = v;
+
+            if (r.TryGetProperty("auto_switch_games", out var asg) && asg.ValueKind == JsonValueKind.True) _s.AutoSwitchGames = true;
+            if (r.TryGetProperty("auto_revert_profile", out var arp) && arp.ValueKind == JsonValueKind.True) _s.AutoRevertProfile = true;
+            if (r.TryGetProperty("game_profiles", out var gp) && gp.ValueKind == JsonValueKind.Object)
+            {
+                _s.GameProfiles.Clear();
+                foreach (var p in gp.EnumerateObject())
+                    if (p.Value.GetString() is { } pn) _s.GameProfiles[p.Name] = pn;
+            }
+            if (r.TryGetProperty("custom_games", out var cg) && cg.ValueKind == JsonValueKind.Array)
+            {
+                _s.CustomGames.Clear();
+                foreach (var el in cg.EnumerateArray())
+                    if (el.GetString() is { } ex) _s.CustomGames.Add(ex);
+            }
 
             if (UpdateNotifyToggle != null) UpdateNotifyToggle.IsChecked = _s.UpdateNotifications;
             if (ToggleKeyBtn != null) ToggleKeyBtn.Content = string.IsNullOrEmpty(_s.ToggleKey) ? "NONE" : DisplayKey(_s.ToggleKey);
@@ -1895,6 +1941,252 @@ public partial class MainWindow : Window
     }
 
     private void ReloadProfiles_Click(object s, RoutedEventArgs e) => LoadProfileList();
+
+    private static readonly (string key, string label, string[] exes)[] KnownGames =
+    {
+        ("valorant",      "Valorant",            new[] { "valorant-win64-shipping.exe" }),
+        ("cs2",           "Counter-Strike 2",    new[] { "cs2.exe" }),
+        ("apex",          "Apex Legends",        new[] { "r5apex.exe" }),
+        ("fortnite",      "Fortnite",            new[] { "fortniteclient-win64-shipping.exe" }),
+        ("overwatch",     "Overwatch 2",         new[] { "overwatch.exe" }),
+        ("r6",            "Rainbow Six Siege",   new[] { "rainbowsix.exe", "rainbowsix_be.exe" }),
+        ("pubg",          "PUBG: Battlegrounds", new[] { "tslgame.exe" }),
+        ("cod",           "Call of Duty",        new[] { "cod.exe" }),
+        ("marvelrivals",  "Marvel Rivals",       new[] { "marvel-win64-shipping.exe" }),
+        ("thefinals",     "The Finals",          new[] { "discovery.exe" }),
+        ("destiny2",      "Destiny 2",           new[] { "destiny2.exe" }),
+        ("bf2042",        "Battlefield 2042",    new[] { "bf2042.exe" }),
+    };
+
+    private DispatcherTimer? _gameWatchTimer;
+    private string?          _activeGameKey;
+    private string?          _preGameProfile;
+
+    private void InitGamesPanel()
+    {
+        AutoSwitchToggle.IsChecked = _s.AutoSwitchGames;
+        AutoRevertToggle.IsChecked = _s.AutoRevertProfile;
+        BuildGamesList();
+        if (_s.AutoSwitchGames) StartGameWatcher();
+    }
+
+    private void ReloadGames_Click(object s, RoutedEventArgs e) => BuildGamesList();
+
+    private void BuildGamesList()
+    {
+        if (GamesListPanel == null) return;
+        GamesListPanel.Children.Clear();
+
+        foreach (var (key, label, _) in KnownGames)
+            GamesListPanel.Children.Add(BuildGameRow(key, label, custom: false));
+
+        foreach (var exe in _s.CustomGames)
+            GamesListPanel.Children.Add(BuildGameRow("custom:" + exe.ToLowerInvariant(), exe, custom: true));
+    }
+
+    private Border BuildGameRow(string key, string label, bool custom)
+    {
+        var grid = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
+        if (custom)
+        {
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(6) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
+        }
+
+        var name = new TextBlock
+        {
+            Text                = label,
+            FontFamily          = (FontFamily)FindResource("IBMPlexMono"),
+            FontSize            = 11,
+            Foreground          = new SolidColorBrush(Color.FromRgb(0xf5, 0xf5, 0xf5)),
+            VerticalAlignment   = VerticalAlignment.Center,
+            TextTrimming        = TextTrimming.CharacterEllipsis
+        };
+        Grid.SetColumn(name, 0);
+        grid.Children.Add(name);
+
+        _s.GameProfiles.TryGetValue(key, out var current);
+        var sel = new Button
+        {
+            Content             = string.IsNullOrEmpty(current) ? "OFF" : current,
+            Style               = (Style)FindResource("DarkBtn"),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
+            Tag                 = key
+        };
+        sel.Click += GameProfileCycle_Click;
+        Grid.SetColumn(sel, 2);
+        grid.Children.Add(sel);
+
+        if (custom)
+        {
+            var del = new Button
+            {
+                Content = "×",
+                Style   = (Style)FindResource("DarkBtn"),
+                Tag     = key
+            };
+            del.Click += RemoveCustomGame_Click;
+            Grid.SetColumn(del, 4);
+            grid.Children.Add(del);
+        }
+
+        return new Border
+        {
+            BorderBrush     = new SolidColorBrush(Color.FromRgb(0x1e, 0x1e, 0x1e)),
+            BorderThickness = new Thickness(0, 0, 0, 1),
+            Padding         = new Thickness(0, 0, 0, 6),
+            Margin          = new Thickness(0, 0, 0, 6),
+            Child           = grid
+        };
+    }
+
+    private void GameProfileCycle_Click(object s, RoutedEventArgs e)
+    {
+        if (s is not Button btn || btn.Tag is not string key) return;
+
+        var options = new List<string> { "" };
+        try
+        {
+            Directory.CreateDirectory(ProfilesDir);
+            foreach (var f in Directory.GetFiles(ProfilesDir, "*.json").OrderBy(f => f))
+                options.Add(Path.GetFileNameWithoutExtension(f));
+        }
+        catch { }
+
+        _s.GameProfiles.TryGetValue(key, out var current);
+        int idx  = options.FindIndex(o => string.Equals(o, current ?? "", StringComparison.OrdinalIgnoreCase));
+        int next = (idx + 1) % options.Count;
+        string chosen = options[next];
+
+        if (string.IsNullOrEmpty(chosen)) _s.GameProfiles.Remove(key);
+        else                              _s.GameProfiles[key] = chosen;
+
+        btn.Content = string.IsNullOrEmpty(chosen) ? "OFF" : chosen;
+        SaveSettings();
+    }
+
+    private void AddCustomGame_Click(object s, RoutedEventArgs e)
+    {
+        var raw = CustomGameBox.Text?.Trim();
+        if (string.IsNullOrEmpty(raw)) return;
+
+        var exe = raw.ToLowerInvariant();
+        if (!exe.EndsWith(".exe")) exe += ".exe";
+
+        bool known  = KnownGames.Any(g => g.exes.Contains(exe));
+        bool exists = _s.CustomGames.Any(c => string.Equals(c, exe, StringComparison.OrdinalIgnoreCase));
+        if (!known && !exists) _s.CustomGames.Add(exe);
+
+        CustomGameBox.Text = "";
+        SaveSettings();
+        BuildGamesList();
+    }
+
+    private void RemoveCustomGame_Click(object s, RoutedEventArgs e)
+    {
+        if (s is not Button btn || btn.Tag is not string key) return;
+        if (!key.StartsWith("custom:")) return;
+        var exe = key["custom:".Length..];
+        _s.CustomGames.RemoveAll(c => string.Equals(c, exe, StringComparison.OrdinalIgnoreCase));
+        _s.GameProfiles.Remove(key);
+        SaveSettings();
+        BuildGamesList();
+    }
+
+    private void AutoSwitchToggle_Changed(object s, RoutedEventArgs e)
+    {
+        _s.AutoSwitchGames = AutoSwitchToggle.IsChecked == true;
+        SaveSettings();
+        if (_s.AutoSwitchGames) StartGameWatcher();
+        else                    StopGameWatcher();
+    }
+
+    private void AutoRevertToggle_Changed(object s, RoutedEventArgs e)
+    {
+        _s.AutoRevertProfile = AutoRevertToggle.IsChecked == true;
+        SaveSettings();
+    }
+
+    private void StartGameWatcher()
+    {
+        if (_gameWatchTimer != null) return;
+        _gameWatchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
+        _gameWatchTimer.Tick += (_, _) => GameWatchTick();
+        _gameWatchTimer.Start();
+    }
+
+    private void StopGameWatcher()
+    {
+        _gameWatchTimer?.Stop();
+        _gameWatchTimer = null;
+        _activeGameKey  = null;
+        _preGameProfile = null;
+    }
+
+    private void GameWatchTick()
+    {
+        string fg = ForegroundExeName();
+        string? matchKey = ResolveGameKey(fg);
+
+        if (matchKey == _activeGameKey) return;
+
+        if (matchKey != null)
+        {
+            if (_activeGameKey == null)
+            {
+                try { _preGameProfile = File.Exists(LastUsedFile) ? File.ReadAllText(LastUsedFile).Trim() : null; }
+                catch { _preGameProfile = null; }
+            }
+            _activeGameKey = matchKey;
+            if (_s.GameProfiles.TryGetValue(matchKey, out var name)) LoadProfileByName(name);
+        }
+        else
+        {
+            _activeGameKey = null;
+            if (_s.AutoRevertProfile && !string.IsNullOrEmpty(_preGameProfile) && File.Exists(_preGameProfile))
+                LoadProfile(_preGameProfile);
+            _preGameProfile = null;
+        }
+    }
+
+    private string? ResolveGameKey(string exe)
+    {
+        if (string.IsNullOrEmpty(exe)) return null;
+
+        foreach (var (key, _, exes) in KnownGames)
+            if (exes.Contains(exe) && _s.GameProfiles.ContainsKey(key))
+                return key;
+
+        var customKey = "custom:" + exe;
+        if (_s.CustomGames.Any(c => string.Equals(c, exe, StringComparison.OrdinalIgnoreCase))
+            && _s.GameProfiles.ContainsKey(customKey))
+            return customKey;
+
+        return null;
+    }
+
+    private void LoadProfileByName(string name)
+    {
+        var path = Path.Combine(ProfilesDir, name + ".json");
+        if (File.Exists(path)) LoadProfile(path);
+    }
+
+    private static string ForegroundExeName()
+    {
+        try
+        {
+            var hwnd = GetForegroundWindow();
+            if (hwnd == IntPtr.Zero) return "";
+            GetWindowThreadProcessId(hwnd, out uint pid);
+            if (pid == 0) return "";
+            using var p = System.Diagnostics.Process.GetProcessById((int)pid);
+            return p.ProcessName.ToLowerInvariant() + ".exe";
+        }
+        catch { return ""; }
+    }
 
     private static string DisplayKey(string key)
     {
