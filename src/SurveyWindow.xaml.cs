@@ -65,15 +65,55 @@ public partial class SurveyWindow : Window
         btn.Foreground  = new SolidColorBrush(Color.FromRgb(0xf5, 0xf5, 0xf5));
         btn.BorderBrush = new SolidColorBrush(Color.FromRgb(0x3a, 0x3a, 0x3a));
 
-        SubmitBtn.IsEnabled = true;
+        if (IsOtherSelected())
+        {
+            OtherInputHost.Visibility = Visibility.Visible;
+            OtherInput.Focus();
+            OtherInput.CaretIndex = OtherInput.Text.Length;
+        }
+        else
+        {
+            OtherInputHost.Visibility = Visibility.Collapsed;
+        }
+
+        UpdateSubmitState();
+    }
+
+    private bool IsOtherSelected() =>
+        string.Equals(_selected, "Other", StringComparison.OrdinalIgnoreCase);
+
+    private void UpdateSubmitState()
+    {
+        if (string.IsNullOrEmpty(_selected))
+            SubmitBtn.IsEnabled = false;
+        else if (IsOtherSelected())
+            SubmitBtn.IsEnabled = OtherInput.Text.Trim().Length > 0;
+        else
+            SubmitBtn.IsEnabled = true;
+    }
+
+    private void OtherInput_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        OtherPlaceholder.Visibility = OtherInput.Text.Length == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        UpdateSubmitState();
     }
 
     private void Submit_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrEmpty(_selected)) return;
 
+        string answer = _selected;
+        if (IsOtherSelected())
+        {
+            string typed = OtherInput.Text.Trim();
+            if (typed.Length == 0) return;
+            answer = "Other: " + typed;
+        }
+
         Submitted = true;
-        FireWebhook(_question, _selected, _launchCount);
+        FireWebhook(_question, answer, _launchCount);
         Close();
     }
 
