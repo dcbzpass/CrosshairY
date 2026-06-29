@@ -1944,6 +1944,7 @@ public partial class MainWindow : Window
 
     private static readonly (string key, string label, string[] exes)[] KnownGames =
     {
+        ("bloodstrike",   "Blood Strike",        new[] { "bloodstrike.exe" }),
         ("valorant",      "Valorant",            new[] { "valorant-win64-shipping.exe" }),
         ("cs2",           "Counter-Strike 2",    new[] { "cs2.exe" }),
         ("apex",          "Apex Legends",        new[] { "r5apex.exe" }),
@@ -2011,7 +2012,8 @@ public partial class MainWindow : Window
         _s.GameProfiles.TryGetValue(key, out var current);
         var sel = new Button
         {
-            Content             = string.IsNullOrEmpty(current) ? "OFF" : current,
+            Content             = string.IsNullOrEmpty(current) ? "OFF" : "ON",
+            ToolTip             = string.IsNullOrEmpty(current) ? null : current,
             Style               = (Style)FindResource("DarkBtn"),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
             Tag                 = key
@@ -2064,7 +2066,8 @@ public partial class MainWindow : Window
         if (string.IsNullOrEmpty(chosen)) _s.GameProfiles.Remove(key);
         else                              _s.GameProfiles[key] = chosen;
 
-        btn.Content = string.IsNullOrEmpty(chosen) ? "OFF" : chosen;
+        btn.Content = string.IsNullOrEmpty(chosen) ? "OFF" : "ON";
+        btn.ToolTip = string.IsNullOrEmpty(chosen) ? null : chosen;
         SaveSettings();
     }
 
